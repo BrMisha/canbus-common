@@ -40,6 +40,9 @@ pub enum FrameId {
     FirmwareUploadPart = 8028,          // from host
     FirmwareUploadFinished = 8029,         // from host
     FirmwareStartUpdate = 8030,         // from host
+
+    BatteryVoltage = 500,
+    BatteryCurrent = 510,
 }
 
 impl FrameId {

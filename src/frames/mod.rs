@@ -25,6 +25,9 @@ pub enum Frame {
     FirmwareUploadPart(firmware::UploadPart),
     FirmwareUploadFinished,
     FirmwareStartUpdate,
+
+    BatteryVoltage(Type<Option<u32>>),
+    BatteryCurrent(Type<Option<u32>>),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -151,6 +154,29 @@ impl Frame {
                 ParserType::Remote(_) => Err(ParseError::RemoteFrame),
                 ParserType::Data(_) => Ok(Frame::FirmwareUploadFinished),
             },
+
+            FrameId::BatteryVoltage => match data {
+                ParserType::Data(data) => match data.len() {
+                    4 => Ok(Frame::BatteryVoltage(Data(Some(u32::from_be_bytes(<[u8; 4]>::try_from(&data[..4]).unwrap()))))),
+                    0 => Ok(Frame::BatteryVoltage(Data(None))),
+                    _ => Err(ParseError::WrongDataSize),
+                }
+                ParserType::Remote(len) => match len {
+                    4 => Ok(Frame::BatteryVoltage(Remote)),
+                    _ => Err(ParseError::RemovedWrongDlc),
+                },
+            }
+            FrameId::BatteryCurrent => match data {
+                ParserType::Data(data) => match data.len() {
+                    4 => Ok(Frame::BatteryCurrent(Data(Some(u32::from_be_bytes(<[u8; 4]>::try_from(&data[..4]).unwrap()))))),
+                    0 => Ok(Frame::BatteryCurrent(Data(None))),
+                    _ => Err(ParseError::WrongDataSize),
+                }
+                ParserType::Remote(len) => match len {
+                    4 => Ok(Frame::BatteryCurrent(Remote)),
+                    _ => Err(ParseError::RemovedWrongDlc),
+                },
+            }
         }
     }
 
@@ -195,6 +221,21 @@ impl Frame {
             Frame::FirmwareStartUpdate => (FrameId::FirmwareStartUpdate, RawType::new_data([])),
             Frame::FirmwareUploadFinished => {
                 (FrameId::FirmwareUploadFinished, RawType::new_data([]))
+            },
+
+            Frame::BatteryVoltage(v) => {
+                (FrameId::BatteryVoltage, match v {
+                    Remote => RawType::Remote(4),
+                    Data(Some(v)) => RawType::new_data(<[u8; 4]>::from(v.to_be_bytes())),
+                    Data(None) => RawType::new_data([0_u8; 0]),
+                })
+            }
+            Frame::BatteryCurrent(v) => {
+                (FrameId::BatteryCurrent, match v {
+                    Remote => RawType::Remote(4),
+                    Data(Some(v)) => RawType::new_data(<[u8; 4]>::from(v.to_be_bytes())),
+                    Data(None) => RawType::new_data([0_u8; 0]),
+                })
             }
         }
     }
@@ -212,6 +253,9 @@ impl Frame {
             Frame::FirmwareUploadPart(_) => FrameId::FirmwareUploadPart,
             Frame::FirmwareStartUpdate => FrameId::FirmwareStartUpdate,
             Frame::FirmwareUploadFinished => FrameId::FirmwareUploadFinished,
+
+            Frame::BatteryVoltage(_) => FrameId::BatteryVoltage,
+            Frame::BatteryCurrent(_) => FrameId::BatteryCurrent,
         }
     }
 }
@@ -428,5 +472,92 @@ mod tests {
             Frame::FirmwareUploadPause(true).raw_frame(),
             (FrameId::FirmwareUploadPause, RawType::new_data([1]))
         );
+    }
+
+    #[test]
+    fn battery() {
+        {
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryVoltage,
+                    ParserType::Remote(3)
+                ),
+                Err(ParseError::RemovedWrongDlc)
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryVoltage,
+                    ParserType::Remote(4)
+                ),
+                Ok(Frame::BatteryVoltage(Remote))
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryVoltage,
+                    ParserType::Data(&[0, 0, 0, 0x57, 0xA4])
+                ),
+                Err(ParseError::WrongDataSize)
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryVoltage,
+                    ParserType::Data(&[])
+                ),
+                Ok(Frame::BatteryVoltage(Data(None)))
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryVoltage,
+                    ParserType::Data(&[0, 0, 0x57, 0xA4])
+                ),
+                Ok(Frame::BatteryVoltage(Data(Some(0x000057A4))))
+            );
+        }
+
+        {
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCurrent,
+                    ParserType::Remote(3)
+                ),
+                Err(ParseError::RemovedWrongDlc)
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCurrent,
+                    ParserType::Remote(4)
+                ),
+                Ok(Frame::BatteryCurrent(Remote))
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCurrent,
+                    ParserType::Data(&[0, 0, 0, 0x57, 0xA4])
+                ),
+                Err(ParseError::WrongDataSize)
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCurrent,
+                    ParserType::Data(&[])
+                ),
+                Ok(Frame::BatteryCurrent(Data(None)))
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCurrent,
+                    ParserType::Data(&[0, 0, 0x57, 0xA4])
+                ),
+                Ok(Frame::BatteryCurrent(Data(Some(0x000057A4))))
+            );
+        }
     }
 }
