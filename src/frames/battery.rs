@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct CellState {
     pub balancing: bool,
     pub voltage: u16

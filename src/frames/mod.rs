@@ -28,7 +28,7 @@ pub enum Frame {
     FirmwareStartUpdate,
 
     BatteryVoltage(Type<Option<u32>>),
-    BatteryCurrent(Type<Option<u32>>),
+    BatteryCurrent(Type<Option<i32>>),
     BatteryCellCount(Type<u16>),
     BatteryCellsStates(Type<battery::CellsStates>),
 }
@@ -171,7 +171,7 @@ impl Frame {
             }
             FrameId::BatteryCurrent => match data {
                 ParserType::Data(data) => match data.len() {
-                    4 => Ok(Frame::BatteryCurrent(Data(Some(u32::from_be_bytes(<[u8; 4]>::try_from(&data[..4]).unwrap()))))),
+                    4 => Ok(Frame::BatteryCurrent(Data(Some(i32::from_be_bytes(<[u8; 4]>::try_from(&data[..4]).unwrap()))))),
                     0 => Ok(Frame::BatteryCurrent(Data(None))),
                     _ => Err(ParseError::WrongDataSize),
                 }
