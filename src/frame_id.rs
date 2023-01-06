@@ -42,7 +42,9 @@ pub enum FrameId {
     FirmwareStartUpdate = 8030,         // from host
 
     BatteryVoltage = 500,
-    BatteryCurrent = 510,
+    BatteryCurrent = 501,
+    BatteryCellCount = 502,
+    BatteryCellsStates = 503,
 }
 
 impl FrameId {

@@ -6,6 +6,7 @@ pub mod dyn_id;
 pub mod firmware;
 pub mod serial;
 pub mod version;
+pub mod battery;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Type<T> {
@@ -13,7 +14,7 @@ pub enum Type<T> {
     Remote,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Frame {
     Serial(Type<serial::Serial>),
     DynId(dyn_id::Data),
@@ -28,6 +29,8 @@ pub enum Frame {
 
     BatteryVoltage(Type<Option<u32>>),
     BatteryCurrent(Type<Option<u32>>),
+    BatteryCellCount(Type<u16>),
+    BatteryCellsStates(Type<battery::CellsStates>),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -177,6 +180,22 @@ impl Frame {
                     _ => Err(ParseError::RemovedWrongDlc),
                 },
             }
+            FrameId::BatteryCellCount => match data {
+                ParserType::Data(data) => match data.len() {
+                    2 => Ok(Frame::BatteryCellCount(Data(u16::from_be_bytes(<[u8; 2]>::try_from(&data[..2]).unwrap())))),
+                    _ => Err(ParseError::WrongDataSize),
+                }
+                ParserType::Remote(len) => match len {
+                    2 => Ok(Frame::BatteryCellCount(Remote)),
+                    _ => Err(ParseError::RemovedWrongDlc),
+                },
+            }
+            FrameId::BatteryCellsStates => match data {
+                ParserType::Data(data) => battery::CellsStates::try_from(data)
+                    .map(|v| Frame::BatteryCellsStates(Data(v)))
+                    .map_err(|_| ParseError::WrongData),
+                ParserType::Remote(_len) => Ok(Frame::BatteryCellsStates(Remote)),
+            }
         }
     }
 
@@ -237,6 +256,18 @@ impl Frame {
                     Data(None) => RawType::new_data([0_u8; 0]),
                 })
             }
+            Frame::BatteryCellCount(v) => {
+                (FrameId::BatteryCellCount, match v {
+                    Remote => RawType::Remote(2),
+                    Data(v) => RawType::new_data(<[u8; 2]>::from(v.to_be_bytes())),
+                })
+            }
+            Frame::BatteryCellsStates(v) => {
+                (FrameId::BatteryCellsStates, match v {
+                    Remote => RawType::Remote(0),
+                    Data(v) => RawType::new_data(arrayvec::ArrayVec::<u8, 8>::from(v)),
+                })
+            }
         }
     }
 
@@ -256,6 +287,8 @@ impl Frame {
 
             Frame::BatteryVoltage(_) => FrameId::BatteryVoltage,
             Frame::BatteryCurrent(_) => FrameId::BatteryCurrent,
+            Frame::BatteryCellCount(_) => FrameId::BatteryCellCount,
+            Frame::BatteryCellsStates(_) => FrameId::BatteryCellsStates,
         }
     }
 }
@@ -313,7 +346,7 @@ mod tests {
     #[test]
     fn version() {
         fn none(id: FrameId, res: Frame) {
-            assert_eq!(Frame::parse_frame(id, ParserType::Remote(8)), Ok(res));
+            assert_eq!(Frame::parse_frame(id, ParserType::Remote(8)), Ok(res.clone()));
             assert_eq!(res.raw_frame(), (id, RawType::Remote(8)));
         }
         none(FrameId::FirmwareVersion, Frame::FirmwareVersion(Remote));
@@ -326,7 +359,7 @@ mod tests {
         fn data(v: version::Version, id: FrameId, res: Frame) {
             assert_eq!(
                 Frame::parse_frame(id, ParserType::Data(&<[u8; 8]>::from(v))),
-                Ok(res)
+                Ok(res.clone())
             );
 
             assert_eq!(res.raw_frame(), (id, RawType::new_data(<[u8; 8]>::from(v))));
@@ -557,6 +590,80 @@ mod tests {
                     ParserType::Data(&[0, 0, 0x57, 0xA4])
                 ),
                 Ok(Frame::BatteryCurrent(Data(Some(0x000057A4))))
+            );
+        }
+
+        {
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCellCount,
+                    ParserType::Remote(3)
+                ),
+                Err(ParseError::RemovedWrongDlc)
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCellCount,
+                    ParserType::Remote(2)
+                ),
+                Ok(Frame::BatteryCellCount(Remote))
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCellCount,
+                    ParserType::Data(&[30])
+                ),
+                Err(ParseError::WrongDataSize)
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCellCount,
+                    ParserType::Data(&[0, 30])
+                ),
+                Ok(Frame::BatteryCellCount(Data(30)))
+            );
+        }
+
+        {
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCellsStates,
+                    ParserType::Remote(0)
+                ),
+                Ok(Frame::BatteryCellsStates(Remote))
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCellsStates,
+                    ParserType::Data(&[0, 0, 0, 0x57, 0xA4])
+                ),
+                Err(ParseError::WrongData)
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryCellsStates,
+                    ParserType::Data(&[0, 10, 0x57, 0xA4, 0x0A, 0x44])
+                ),
+                Ok(Frame::BatteryCellsStates(Data(battery::CellsStates {
+                    from: 10,
+                    values: {
+                        let mut arr: arrayvec::ArrayVec<battery::CellState, 3> = Default::default();
+                        arr.push(battery::CellState {
+                            balancing: false,
+                            voltage: 0x57A4,
+                        });
+                        arr.push(battery::CellState {
+                            balancing: false,
+                            voltage: 0x0A44,
+                        });
+                        arr
+                    },
+                })))
             );
         }
     }
