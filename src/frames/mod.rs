@@ -29,6 +29,7 @@ pub enum Frame {
 
     BatteryVoltage(Type<Option<u32>>),
     BatteryCurrent(Type<Option<i32>>),
+    BatteryVoltageCurrent(Type<Option<(u32, i32)>>),
     BatteryCellCount(Type<u16>),
     BatteryCellsStates(Type<battery::CellsStates>),
 }
@@ -180,6 +181,22 @@ impl Frame {
                     _ => Err(ParseError::RemovedWrongDlc),
                 },
             }
+            FrameId::BatteryVoltageCurrent => match data {
+                ParserType::Data(data) => match data.len() {
+                    8 => Ok(Frame::BatteryVoltageCurrent(Data(
+                        Some((
+                            u32::from_be_bytes(<[u8; 4]>::try_from(&data[..4]).unwrap()),
+                            i32::from_be_bytes(<[u8; 4]>::try_from(&data[4..]).unwrap())
+                        ))
+                    ))),
+                    0 => Ok(Frame::BatteryVoltageCurrent(Data(None))),
+                    _ => Err(ParseError::WrongDataSize),
+                }
+                ParserType::Remote(len) => match len {
+                    8 => Ok(Frame::BatteryVoltageCurrent(Remote)),
+                    _ => Err(ParseError::RemovedWrongDlc),
+                },
+            }
             FrameId::BatteryCellCount => match data {
                 ParserType::Data(data) => match data.len() {
                     2 => Ok(Frame::BatteryCellCount(Data(u16::from_be_bytes(<[u8; 2]>::try_from(&data[..2]).unwrap())))),
@@ -249,6 +266,18 @@ impl Frame {
                     Data(None) => RawType::new_data([0_u8; 0]),
                 })
             }
+            Frame::BatteryVoltageCurrent(v) => {
+                (FrameId::BatteryVoltage, match v {
+                    Remote => RawType::Remote(8),
+                    Data(Some(v)) => {
+                        let mut r: [u8; 8] = Default::default();
+                        r[..4].clone_from_slice(&<[u8; 4]>::from(v.0.to_be_bytes()));
+                        r[4..].clone_from_slice(&<[u8; 4]>::from(v.1.to_be_bytes()));
+                        RawType::new_data(r)
+                    },
+                    Data(None) => RawType::new_data([0_u8; 0]),
+                })
+            }
             Frame::BatteryCurrent(v) => {
                 (FrameId::BatteryCurrent, match v {
                     Remote => RawType::Remote(4),
@@ -287,6 +316,7 @@ impl Frame {
 
             Frame::BatteryVoltage(_) => FrameId::BatteryVoltage,
             Frame::BatteryCurrent(_) => FrameId::BatteryCurrent,
+            Frame::BatteryVoltageCurrent(_) => FrameId::BatteryVoltageCurrent,
             Frame::BatteryCellCount(_) => FrameId::BatteryCellCount,
             Frame::BatteryCellsStates(_) => FrameId::BatteryCellsStates,
         }
@@ -590,6 +620,32 @@ mod tests {
                     ParserType::Data(&[0, 0, 0x57, 0xA4])
                 ),
                 Ok(Frame::BatteryCurrent(Data(Some(0x000057A4))))
+            );
+        }
+
+        {
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryVoltageCurrent,
+                    ParserType::Remote(8)
+                ),
+                Ok(Frame::BatteryVoltageCurrent(Remote))
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryVoltageCurrent,
+                    ParserType::Data(&[0, 0, 0x57, 0xA4, 0, 0, 0xB0, 0x14])
+                ),
+                Ok(Frame::BatteryVoltageCurrent(Data(Some((0x000057A4, 0x0000B014)))))
+            );
+
+            assert_eq!(
+                Frame::parse_frame(
+                    FrameId::BatteryVoltageCurrent,
+                    ParserType::Data(&[0, 0, 0x57, 0xA4, 0, 0, 0, 0])
+                ),
+                Ok(Frame::BatteryVoltageCurrent(Data(Some((0x000057A4, 0i32)))))
             );
         }
 

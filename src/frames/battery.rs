@@ -20,7 +20,7 @@ impl From<&CellState> for u16 {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct CellsStates {
     pub from: u16,
     pub values: arrayvec::ArrayVec<CellState, 3>,
@@ -58,8 +58,6 @@ impl From<&CellsStates> for arrayvec::ArrayVec<u8, 8> {
         array.push(ar[1]);
 
         for i in &v.values {
-            //let i = (i.voltage & 0b0111111111111111) | ((i.balancing as u16) << 15);
-
             ar = <u16>::from(i).to_be_bytes();
             array.push(ar[0]);
             array.push(ar[1]);

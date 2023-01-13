@@ -43,8 +43,9 @@ pub enum FrameId {
 
     BatteryVoltage = 500,
     BatteryCurrent = 501,
-    BatteryCellCount = 502,
-    BatteryCellsStates = 503,
+    BatteryVoltageCurrent = 502,
+    BatteryCellCount = 503,
+    BatteryCellsStates = 504,
 }
 
 impl FrameId {
