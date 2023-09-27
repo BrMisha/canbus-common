@@ -1,29 +1,7 @@
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct CellState {
-    pub balancing: bool,
-    pub voltage: u16
-}
-
-impl From<u16> for CellState {
-    fn from(value: u16) -> Self {
-        Self {
-            balancing: (value & (1 << 15)) != 0,
-            voltage: value & 0b0111111111111111,
-        }
-    }
-}
-
-impl From<&CellState> for u16 {
-    fn from(value: &CellState) -> Self {
-        (value.voltage & 0b0111111111111111) |
-            ((value.balancing as u16) << 15)
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct CellsStates {
     pub from: u16,
-    pub values: arrayvec::ArrayVec<CellState, 3>,
+    pub values: arrayvec::ArrayVec<u16, 3>,
 }
 
 impl TryFrom<&[u8]> for CellsStates {
@@ -37,10 +15,10 @@ impl TryFrom<&[u8]> for CellsStates {
         let mut value = value.chunks(2).map(|v| {
             u16::from_be_bytes(<[u8; 2]>::try_from(&v[..2]).unwrap())
         });
+
         let from = value.next().unwrap();
         let values= value
-            .map(|v| CellState::from(v))
-            .collect::<arrayvec::ArrayVec<CellState, 3>>();
+            .collect::<arrayvec::ArrayVec<u16, 3>>();
 
         Ok(Self{
             from,
@@ -58,7 +36,7 @@ impl From<&CellsStates> for arrayvec::ArrayVec<u8, 8> {
         array.push(ar[1]);
 
         for i in &v.values {
-            ar = <u16>::from(i).to_be_bytes();
+            ar = i.to_be_bytes();
             array.push(ar[0]);
             array.push(ar[1]);
         }
@@ -73,12 +51,9 @@ mod tests {
 
     #[test]
     fn cell_voltage() {
-        let mut array = arrayvec::ArrayVec::<CellState, 3>::default();
+        let mut array = arrayvec::ArrayVec::<u16, 3>::default();
         {
-            array.push(CellState {
-                balancing: true,
-                voltage: 4200
-            });
+            array.push(4200);
 
             let v = CellsStates {
                 from: 2,
@@ -92,18 +67,9 @@ mod tests {
         {
             array = Default::default();
 
-            array.push(CellState {
-                balancing: true,
-                voltage: 4200
-            });
-            array.push(CellState {
-                balancing: true,
-                voltage: 15100
-            });
-            array.push(CellState {
-                balancing: true,
-                voltage: 1000
-            });
+            array.push(4200);
+            array.push(15100);
+            array.push(1000);
 
             let v = CellsStates {
                 from: 2,

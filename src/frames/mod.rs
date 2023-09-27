@@ -708,15 +708,9 @@ mod tests {
                 Ok(Frame::BatteryCellsStates(Data(battery::CellsStates {
                     from: 10,
                     values: {
-                        let mut arr: arrayvec::ArrayVec<battery::CellState, 3> = Default::default();
-                        arr.push(battery::CellState {
-                            balancing: false,
-                            voltage: 0x57A4,
-                        });
-                        arr.push(battery::CellState {
-                            balancing: false,
-                            voltage: 0x0A44,
-                        });
+                        let mut arr: arrayvec::ArrayVec<u16, 3> = Default::default();
+                        arr.push(0x57A4);
+                        arr.push(0x0A44);
                         arr
                     },
                 })))
