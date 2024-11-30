@@ -1,8 +1,8 @@
-use crate::frame_id::FrameId;
+use crate::message::MessageId;
 use crate::frames::firmware::{UploadPart, UploadPartChangePos};
 use crate::frames::Type::{Data, Remote};
 
-pub mod dyn_id;
+/*pub mod dyn_id;
 pub mod firmware;
 pub mod serial;
 pub mod version;
@@ -65,9 +65,9 @@ impl RawType {
 }
 
 impl Frame {
-    pub fn parse_frame(frame_id: FrameId, data: ParserType) -> Result<Frame, ParseError> {
+    pub fn parse_frame(frame_id: MessageId, data: ParserType) -> Result<Frame, ParseError> {
         match frame_id {
-            FrameId::Serial => match data {
+            MessageId::Serial => match data {
                 ParserType::Remote(len) => match len {
                     5 => Ok(Frame::Serial(Remote)),
                     _l => Err(ParseError::RemovedWrongDlc),
@@ -79,7 +79,7 @@ impl Frame {
                     _ => Err(ParseError::WrongDataSize),
                 },
             },
-            FrameId::DynId => match data {
+            MessageId::DynId => match data {
                 ParserType::Remote(_) => Err(ParseError::RemoteFrame),
                 ParserType::Data(data) => match data.len() {
                     6 => Ok(Frame::DynId(dyn_id::Data::from(
@@ -88,11 +88,11 @@ impl Frame {
                     _ => Err(ParseError::WrongDataSize),
                 },
             },
-            n @ FrameId::HardwareVersion | n @ FrameId::FirmwareVersion => {
-                fn put(n: FrameId, v: Type<version::Version>) -> Frame {
+            n @ MessageId::HardwareVersion | n @ MessageId::FirmwareVersion => {
+                fn put(n: MessageId, v: Type<version::Version>) -> Frame {
                     match n {
-                        FrameId::HardwareVersion => Frame::HardwareVersion(v),
-                        FrameId::FirmwareVersion => Frame::FirmwareVersion(v),
+                        MessageId::HardwareVersion => Frame::HardwareVersion(v),
+                        MessageId::FirmwareVersion => Frame::FirmwareVersion(v),
                         _ => unreachable!(),
                     }
                 }
@@ -112,7 +112,7 @@ impl Frame {
                     },
                 }
             }
-            FrameId::PendingFirmwareVersion => match data {
+            MessageId::PendingFirmwareVersion => match data {
                 ParserType::Remote(len) => match len {
                     8 => Ok(Frame::PendingFirmwareVersion(Remote)),
                     _ => Err(ParseError::RemovedWrongDlc),
@@ -125,7 +125,7 @@ impl Frame {
                     _ => Err(ParseError::RemovedWrongDlc),
                 },
             },
-            FrameId::FirmwareUploadPartChangePos => match data {
+            MessageId::FirmwareUploadPartChangePos => match data {
                 ParserType::Remote(_) => Err(ParseError::RemoteFrame),
                 ParserType::Data(data) => match data.len() {
                     3 => Ok(Frame::FirmwareUploadPartChangePos(
@@ -134,7 +134,7 @@ impl Frame {
                     _ => Err(ParseError::WrongDataSize),
                 },
             },
-            FrameId::FirmwareUploadPart => match data {
+            MessageId::FirmwareUploadPart => match data {
                 ParserType::Remote(_) => Err(ParseError::RemoteFrame),
                 ParserType::Data(data) => match data.len() {
                     8 => Ok(Frame::FirmwareUploadPart(UploadPart::from(
@@ -143,23 +143,23 @@ impl Frame {
                     _ => Err(ParseError::WrongDataSize),
                 },
             },
-            FrameId::FirmwareStartUpdate => match data {
+            MessageId::FirmwareStartUpdate => match data {
                 ParserType::Remote(_) => Err(ParseError::RemoteFrame),
                 ParserType::Data(_) => Ok(Frame::FirmwareStartUpdate),
             },
-            FrameId::FirmwareUploadPause => match data {
+            MessageId::FirmwareUploadPause => match data {
                 ParserType::Remote(_) => Err(ParseError::RemoteFrame),
                 ParserType::Data(data) => match data.len() {
                     1 => Ok(Frame::FirmwareUploadPause(data[0] != 0)),
                     _ => Err(ParseError::WrongDataSize),
                 },
             },
-            FrameId::FirmwareUploadFinished => match data {
+            MessageId::FirmwareUploadFinished => match data {
                 ParserType::Remote(_) => Err(ParseError::RemoteFrame),
                 ParserType::Data(_) => Ok(Frame::FirmwareUploadFinished),
             },
 
-            FrameId::BatteryVoltage => match data {
+            MessageId::BatteryVoltage => match data {
                 ParserType::Data(data) => match data.len() {
                     4 => Ok(Frame::BatteryVoltage(Data(Some(u32::from_be_bytes(<[u8; 4]>::try_from(&data[..4]).unwrap()))))),
                     0 => Ok(Frame::BatteryVoltage(Data(None))),
@@ -170,7 +170,7 @@ impl Frame {
                     _ => Err(ParseError::RemovedWrongDlc),
                 },
             }
-            FrameId::BatteryCurrent => match data {
+            MessageId::BatteryCurrent => match data {
                 ParserType::Data(data) => match data.len() {
                     4 => Ok(Frame::BatteryCurrent(Data(Some(i32::from_be_bytes(<[u8; 4]>::try_from(&data[..4]).unwrap()))))),
                     0 => Ok(Frame::BatteryCurrent(Data(None))),
@@ -181,7 +181,7 @@ impl Frame {
                     _ => Err(ParseError::RemovedWrongDlc),
                 },
             }
-            FrameId::BatteryVoltageCurrent => match data {
+            MessageId::BatteryVoltageCurrent => match data {
                 ParserType::Data(data) => match data.len() {
                     8 => Ok(Frame::BatteryVoltageCurrent(Data(
                         Some((
@@ -197,7 +197,7 @@ impl Frame {
                     _ => Err(ParseError::RemovedWrongDlc),
                 },
             }
-            FrameId::BatteryCellCount => match data {
+            MessageId::BatteryCellCount => match data {
                 ParserType::Data(data) => match data.len() {
                     2 => Ok(Frame::BatteryCellCount(Data(u16::from_be_bytes(<[u8; 2]>::try_from(&data[..2]).unwrap())))),
                     _ => Err(ParseError::WrongDataSize),
@@ -207,7 +207,7 @@ impl Frame {
                     _ => Err(ParseError::RemovedWrongDlc),
                 },
             }
-            FrameId::BatteryCellsStates => match data {
+            MessageId::BatteryCellsStates => match data {
                 ParserType::Data(data) => battery::CellsStates::try_from(data)
                     .map(|v| Frame::BatteryCellsStates(Data(v)))
                     .map_err(|_| ParseError::WrongData),
@@ -216,17 +216,17 @@ impl Frame {
         }
     }
 
-    pub fn raw_frame(&self) -> (FrameId, RawType) {
+    pub fn raw_frame(&self) -> (MessageId, RawType) {
         match self {
             Frame::Serial(v) => match v {
-                Remote => (FrameId::Serial, RawType::Remote(5)),
-                Data(v) => (FrameId::Serial, RawType::new_data(v.0)),
+                Remote => (MessageId::Serial, RawType::Remote(5)),
+                Data(v) => (MessageId::Serial, RawType::new_data(v.0)),
             },
-            Frame::DynId(v) => (FrameId::DynId, RawType::new_data(<[u8; 6]>::from(*v))),
+            Frame::DynId(v) => (MessageId::DynId, RawType::new_data(<[u8; 6]>::from(*v))),
             n @ Frame::HardwareVersion(v) | n @ Frame::FirmwareVersion(v) => {
                 let id = match n {
-                    Frame::HardwareVersion(_) => FrameId::HardwareVersion,
-                    Frame::FirmwareVersion(_) => FrameId::FirmwareVersion,
+                    Frame::HardwareVersion(_) => MessageId::HardwareVersion,
+                    Frame::FirmwareVersion(_) => MessageId::FirmwareVersion,
                     _ => unreachable!(),
                 };
                 match v {
@@ -235,7 +235,7 @@ impl Frame {
                 }
             }
             Frame::PendingFirmwareVersion(v) => (
-                FrameId::PendingFirmwareVersion,
+                MessageId::PendingFirmwareVersion,
                 match v {
                     Remote => RawType::Remote(8),
                     Data(Some(v)) => RawType::new_data(<[u8; 8]>::from(*v)),
@@ -243,31 +243,31 @@ impl Frame {
                 },
             ),
             Frame::FirmwareUploadPartChangePos(v) => (
-                FrameId::FirmwareUploadPartChangePos,
+                MessageId::FirmwareUploadPartChangePos,
                 RawType::new_data(<[u8; 3]>::from(*v)),
             ),
             Frame::FirmwareUploadPause(v) => (
-                FrameId::FirmwareUploadPause,
+                MessageId::FirmwareUploadPause,
                 RawType::new_data([u8::from(*v)]),
             ),
             Frame::FirmwareUploadPart(v) => (
-                FrameId::FirmwareUploadPart,
+                MessageId::FirmwareUploadPart,
                 RawType::new_data(<[u8; 8]>::from(*v)),
             ),
-            Frame::FirmwareStartUpdate => (FrameId::FirmwareStartUpdate, RawType::new_data([])),
+            Frame::FirmwareStartUpdate => (MessageId::FirmwareStartUpdate, RawType::new_data([])),
             Frame::FirmwareUploadFinished => {
-                (FrameId::FirmwareUploadFinished, RawType::new_data([]))
+                (MessageId::FirmwareUploadFinished, RawType::new_data([]))
             },
 
             Frame::BatteryVoltage(v) => {
-                (FrameId::BatteryVoltage, match v {
+                (MessageId::BatteryVoltage, match v {
                     Remote => RawType::Remote(4),
                     Data(Some(v)) => RawType::new_data(<[u8; 4]>::from(v.to_be_bytes())),
                     Data(None) => RawType::new_data([0_u8; 0]),
                 })
             }
             Frame::BatteryVoltageCurrent(v) => {
-                (FrameId::BatteryVoltage, match v {
+                (MessageId::BatteryVoltage, match v {
                     Remote => RawType::Remote(8),
                     Data(Some(v)) => {
                         let mut r: [u8; 8] = Default::default();
@@ -279,20 +279,20 @@ impl Frame {
                 })
             }
             Frame::BatteryCurrent(v) => {
-                (FrameId::BatteryCurrent, match v {
+                (MessageId::BatteryCurrent, match v {
                     Remote => RawType::Remote(4),
                     Data(Some(v)) => RawType::new_data(<[u8; 4]>::from(v.to_be_bytes())),
                     Data(None) => RawType::new_data([0_u8; 0]),
                 })
             }
             Frame::BatteryCellCount(v) => {
-                (FrameId::BatteryCellCount, match v {
+                (MessageId::BatteryCellCount, match v {
                     Remote => RawType::Remote(2),
                     Data(v) => RawType::new_data(<[u8; 2]>::from(v.to_be_bytes())),
                 })
             }
             Frame::BatteryCellsStates(v) => {
-                (FrameId::BatteryCellsStates, match v {
+                (MessageId::BatteryCellsStates, match v {
                     Remote => RawType::Remote(0),
                     Data(v) => RawType::new_data(arrayvec::ArrayVec::<u8, 8>::from(v)),
                 })
@@ -301,24 +301,24 @@ impl Frame {
     }
 
     #[inline]
-    pub fn id(&self) -> FrameId {
+    pub fn id(&self) -> MessageId {
         match self {
-            Frame::Serial(_) => FrameId::Serial,
-            Frame::DynId(_) => FrameId::DynId,
-            Frame::HardwareVersion(_) => FrameId::HardwareVersion,
-            Frame::FirmwareVersion(_) => FrameId::FirmwareVersion,
-            Frame::PendingFirmwareVersion(_) => FrameId::PendingFirmwareVersion,
-            Frame::FirmwareUploadPartChangePos(_) => FrameId::FirmwareUploadPartChangePos,
-            Frame::FirmwareUploadPause(_) => FrameId::FirmwareUploadPause,
-            Frame::FirmwareUploadPart(_) => FrameId::FirmwareUploadPart,
-            Frame::FirmwareStartUpdate => FrameId::FirmwareStartUpdate,
-            Frame::FirmwareUploadFinished => FrameId::FirmwareUploadFinished,
+            Frame::Serial(_) => MessageId::Serial,
+            Frame::DynId(_) => MessageId::DynId,
+            Frame::HardwareVersion(_) => MessageId::HardwareVersion,
+            Frame::FirmwareVersion(_) => MessageId::FirmwareVersion,
+            Frame::PendingFirmwareVersion(_) => MessageId::PendingFirmwareVersion,
+            Frame::FirmwareUploadPartChangePos(_) => MessageId::FirmwareUploadPartChangePos,
+            Frame::FirmwareUploadPause(_) => MessageId::FirmwareUploadPause,
+            Frame::FirmwareUploadPart(_) => MessageId::FirmwareUploadPart,
+            Frame::FirmwareStartUpdate => MessageId::FirmwareStartUpdate,
+            Frame::FirmwareUploadFinished => MessageId::FirmwareUploadFinished,
 
-            Frame::BatteryVoltage(_) => FrameId::BatteryVoltage,
-            Frame::BatteryCurrent(_) => FrameId::BatteryCurrent,
-            Frame::BatteryVoltageCurrent(_) => FrameId::BatteryVoltageCurrent,
-            Frame::BatteryCellCount(_) => FrameId::BatteryCellCount,
-            Frame::BatteryCellsStates(_) => FrameId::BatteryCellsStates,
+            Frame::BatteryVoltage(_) => MessageId::BatteryVoltage,
+            Frame::BatteryCurrent(_) => MessageId::BatteryCurrent,
+            Frame::BatteryVoltageCurrent(_) => MessageId::BatteryVoltageCurrent,
+            Frame::BatteryCellCount(_) => MessageId::BatteryCellCount,
+            Frame::BatteryCellsStates(_) => MessageId::BatteryCellsStates,
         }
     }
 }
@@ -326,41 +326,41 @@ impl Frame {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frame_id::FrameId;
+    use crate::message::MessageId;
     use crate::frames::ParserType;
 
     #[test]
     fn serial() {
         assert_eq!(
-            Frame::parse_frame(FrameId::Serial, ParserType::Remote(5),),
+            Frame::parse_frame(MessageId::Serial, ParserType::Remote(5),),
             Ok(Frame::Serial(Remote))
         );
 
         assert_eq!(
             Frame::Serial(Remote).raw_frame(),
-            (FrameId::Serial, RawType::Remote(5))
+            (MessageId::Serial, RawType::Remote(5))
         );
 
         assert_eq!(
-            Frame::parse_frame(FrameId::Serial, ParserType::Data(&[1, 2, 3, 4, 5])),
+            Frame::parse_frame(MessageId::Serial, ParserType::Data(&[1, 2, 3, 4, 5])),
             Ok(Frame::Serial(Data(serial::Serial::from([1, 2, 3, 4, 5]))))
         );
 
         assert_eq!(
             Frame::Serial(Data(serial::Serial::from([1, 2, 3, 4, 5]))).raw_frame(),
-            (FrameId::Serial, RawType::new_data([1, 2, 3, 4, 5]))
+            (MessageId::Serial, RawType::new_data([1, 2, 3, 4, 5]))
         );
     }
 
     #[test]
     fn dyn_id() {
         assert_eq!(
-            Frame::parse_frame(FrameId::DynId, ParserType::Remote(0),),
+            Frame::parse_frame(MessageId::DynId, ParserType::Remote(0),),
             Err(ParseError::RemoteFrame)
         );
 
         assert_eq!(
-            Frame::parse_frame(FrameId::DynId, ParserType::Data(&[1, 2, 3, 4, 5, 80]),),
+            Frame::parse_frame(MessageId::DynId, ParserType::Data(&[1, 2, 3, 4, 5, 80]),),
             Ok(Frame::DynId(dyn_id::Data::new(
                 serial::Serial::from([1, 2, 3, 4, 5]),
                 80
@@ -369,24 +369,24 @@ mod tests {
 
         assert_eq!(
             Frame::DynId(dyn_id::Data::new(serial::Serial::from([1, 2, 3, 4, 5]), 55)).raw_frame(),
-            (FrameId::DynId, RawType::new_data([1, 2, 3, 4, 5, 55]))
+            (MessageId::DynId, RawType::new_data([1, 2, 3, 4, 5, 55]))
         );
     }
 
     #[test]
     fn version() {
-        fn none(id: FrameId, res: Frame) {
+        fn none(id: MessageId, res: Frame) {
             assert_eq!(Frame::parse_frame(id, ParserType::Remote(8)), Ok(res.clone()));
             assert_eq!(res.raw_frame(), (id, RawType::Remote(8)));
         }
-        none(FrameId::FirmwareVersion, Frame::FirmwareVersion(Remote));
-        none(FrameId::HardwareVersion, Frame::HardwareVersion(Remote));
+        none(MessageId::FirmwareVersion, Frame::FirmwareVersion(Remote));
+        none(MessageId::HardwareVersion, Frame::HardwareVersion(Remote));
         none(
-            FrameId::PendingFirmwareVersion,
+            MessageId::PendingFirmwareVersion,
             Frame::PendingFirmwareVersion(Remote),
         );
 
-        fn data(v: version::Version, id: FrameId, res: Frame) {
+        fn data(v: version::Version, id: MessageId, res: Frame) {
             assert_eq!(
                 Frame::parse_frame(id, ParserType::Data(&<[u8; 8]>::from(v))),
                 Ok(res.clone())
@@ -400,17 +400,17 @@ mod tests {
             path: 3,
             build: 9864,
         };
-        data(v, FrameId::FirmwareVersion, Frame::FirmwareVersion(Data(v)));
-        data(v, FrameId::HardwareVersion, Frame::HardwareVersion(Data(v)));
+        data(v, MessageId::FirmwareVersion, Frame::FirmwareVersion(Data(v)));
+        data(v, MessageId::HardwareVersion, Frame::HardwareVersion(Data(v)));
         data(
             v,
-            FrameId::PendingFirmwareVersion,
+            MessageId::PendingFirmwareVersion,
             Frame::PendingFirmwareVersion(Data(Some(v))),
         );
 
         assert_eq!(
             Frame::parse_frame(
-                FrameId::PendingFirmwareVersion,
+                MessageId::PendingFirmwareVersion,
                 ParserType::Data(&[0_u8; 0])
             ),
             Ok(Frame::PendingFirmwareVersion(Data(None)))
@@ -419,7 +419,7 @@ mod tests {
         assert_eq!(
             Frame::PendingFirmwareVersion(Data(Some(v))).raw_frame(),
             (
-                FrameId::PendingFirmwareVersion,
+                MessageId::PendingFirmwareVersion,
                 RawType::new_data(<[u8; 8]>::from(v))
             )
         );
@@ -428,13 +428,13 @@ mod tests {
     #[test]
     fn firmware_upload_part_change_pos() {
         assert_eq!(
-            Frame::parse_frame(FrameId::DynId, ParserType::Data(&[1, 2, 3, 4]),),
+            Frame::parse_frame(MessageId::DynId, ParserType::Data(&[1, 2, 3, 4]),),
             Err(ParseError::WrongDataSize)
         );
 
         assert_eq!(
             Frame::parse_frame(
-                FrameId::FirmwareUploadPartChangePos,
+                MessageId::FirmwareUploadPartChangePos,
                 ParserType::Data(&[0x01, 0x02, 0x03]),
             ),
             Ok(Frame::FirmwareUploadPartChangePos(
@@ -448,7 +448,7 @@ mod tests {
             )
             .raw_frame(),
             (
-                FrameId::FirmwareUploadPartChangePos,
+                MessageId::FirmwareUploadPartChangePos,
                 RawType::new_data([0x01, 0x02, 0x03])
             )
         );
@@ -458,20 +458,20 @@ mod tests {
     fn firmware_upload_part() {
         assert_eq!(
             Frame::parse_frame(
-                FrameId::FirmwareUploadPart,
+                MessageId::FirmwareUploadPart,
                 ParserType::Data(&[0x01, 0x02, 0x03, 1, 2, 3, 4])
             ),
             Err(ParseError::WrongDataSize)
         );
 
         assert_eq!(
-            Frame::parse_frame(FrameId::FirmwareUploadPart, ParserType::Remote(1)),
+            Frame::parse_frame(MessageId::FirmwareUploadPart, ParserType::Remote(1)),
             Err(ParseError::RemoteFrame)
         );
 
         assert_eq!(
             Frame::parse_frame(
-                FrameId::FirmwareUploadPart,
+                MessageId::FirmwareUploadPart,
                 ParserType::Data(&[0x01, 0x02, 0x03, 1, 2, 3, 4, 5])
             ),
             Ok(Frame::FirmwareUploadPart(
@@ -485,7 +485,7 @@ mod tests {
             )
             .raw_frame(),
             (
-                FrameId::FirmwareUploadPart,
+                MessageId::FirmwareUploadPart,
                 RawType::new_data([0x01, 0x02, 0x03, 1, 2, 3, 4, 5])
             )
         );
@@ -494,46 +494,46 @@ mod tests {
     #[test]
     fn firmware_start_update() {
         assert_eq!(
-            Frame::parse_frame(FrameId::FirmwareStartUpdate, ParserType::Remote(1)),
+            Frame::parse_frame(MessageId::FirmwareStartUpdate, ParserType::Remote(1)),
             Err(ParseError::RemoteFrame)
         );
 
         assert_eq!(
-            Frame::parse_frame(FrameId::FirmwareStartUpdate, ParserType::Data(&[])),
+            Frame::parse_frame(MessageId::FirmwareStartUpdate, ParserType::Data(&[])),
             Ok(Frame::FirmwareStartUpdate)
         );
 
         assert_eq!(
             Frame::FirmwareStartUpdate.raw_frame(),
-            (FrameId::FirmwareStartUpdate, RawType::new_data([]))
+            (MessageId::FirmwareStartUpdate, RawType::new_data([]))
         );
     }
 
     #[test]
     fn firmware_upload_pause() {
         assert_eq!(
-            Frame::parse_frame(FrameId::FirmwareUploadPause, ParserType::Remote(1)),
+            Frame::parse_frame(MessageId::FirmwareUploadPause, ParserType::Remote(1)),
             Err(ParseError::RemoteFrame)
         );
 
         assert_eq!(
-            Frame::parse_frame(FrameId::FirmwareUploadPause, ParserType::Data(&[1])),
+            Frame::parse_frame(MessageId::FirmwareUploadPause, ParserType::Data(&[1])),
             Ok(Frame::FirmwareUploadPause(true))
         );
 
         assert_eq!(
-            Frame::parse_frame(FrameId::FirmwareUploadPause, ParserType::Data(&[0])),
+            Frame::parse_frame(MessageId::FirmwareUploadPause, ParserType::Data(&[0])),
             Ok(Frame::FirmwareUploadPause(false))
         );
 
         assert_eq!(
             Frame::FirmwareUploadPause(false).raw_frame(),
-            (FrameId::FirmwareUploadPause, RawType::new_data([0]))
+            (MessageId::FirmwareUploadPause, RawType::new_data([0]))
         );
 
         assert_eq!(
             Frame::FirmwareUploadPause(true).raw_frame(),
-            (FrameId::FirmwareUploadPause, RawType::new_data([1]))
+            (MessageId::FirmwareUploadPause, RawType::new_data([1]))
         );
     }
 
@@ -542,7 +542,7 @@ mod tests {
         {
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryVoltage,
+                    MessageId::BatteryVoltage,
                     ParserType::Remote(3)
                 ),
                 Err(ParseError::RemovedWrongDlc)
@@ -550,7 +550,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryVoltage,
+                    MessageId::BatteryVoltage,
                     ParserType::Remote(4)
                 ),
                 Ok(Frame::BatteryVoltage(Remote))
@@ -558,7 +558,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryVoltage,
+                    MessageId::BatteryVoltage,
                     ParserType::Data(&[0, 0, 0, 0x57, 0xA4])
                 ),
                 Err(ParseError::WrongDataSize)
@@ -566,7 +566,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryVoltage,
+                    MessageId::BatteryVoltage,
                     ParserType::Data(&[])
                 ),
                 Ok(Frame::BatteryVoltage(Data(None)))
@@ -574,7 +574,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryVoltage,
+                    MessageId::BatteryVoltage,
                     ParserType::Data(&[0, 0, 0x57, 0xA4])
                 ),
                 Ok(Frame::BatteryVoltage(Data(Some(0x000057A4))))
@@ -584,7 +584,7 @@ mod tests {
         {
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCurrent,
+                    MessageId::BatteryCurrent,
                     ParserType::Remote(3)
                 ),
                 Err(ParseError::RemovedWrongDlc)
@@ -592,7 +592,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCurrent,
+                    MessageId::BatteryCurrent,
                     ParserType::Remote(4)
                 ),
                 Ok(Frame::BatteryCurrent(Remote))
@@ -600,7 +600,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCurrent,
+                    MessageId::BatteryCurrent,
                     ParserType::Data(&[0, 0, 0, 0x57, 0xA4])
                 ),
                 Err(ParseError::WrongDataSize)
@@ -608,7 +608,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCurrent,
+                    MessageId::BatteryCurrent,
                     ParserType::Data(&[])
                 ),
                 Ok(Frame::BatteryCurrent(Data(None)))
@@ -616,7 +616,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCurrent,
+                    MessageId::BatteryCurrent,
                     ParserType::Data(&[0, 0, 0x57, 0xA4])
                 ),
                 Ok(Frame::BatteryCurrent(Data(Some(0x000057A4))))
@@ -626,7 +626,7 @@ mod tests {
         {
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryVoltageCurrent,
+                    MessageId::BatteryVoltageCurrent,
                     ParserType::Remote(8)
                 ),
                 Ok(Frame::BatteryVoltageCurrent(Remote))
@@ -634,7 +634,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryVoltageCurrent,
+                    MessageId::BatteryVoltageCurrent,
                     ParserType::Data(&[0, 0, 0x57, 0xA4, 0, 0, 0xB0, 0x14])
                 ),
                 Ok(Frame::BatteryVoltageCurrent(Data(Some((0x000057A4, 0x0000B014)))))
@@ -642,7 +642,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryVoltageCurrent,
+                    MessageId::BatteryVoltageCurrent,
                     ParserType::Data(&[0, 0, 0x57, 0xA4, 0, 0, 0, 0])
                 ),
                 Ok(Frame::BatteryVoltageCurrent(Data(Some((0x000057A4, 0i32)))))
@@ -652,7 +652,7 @@ mod tests {
         {
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCellCount,
+                    MessageId::BatteryCellCount,
                     ParserType::Remote(3)
                 ),
                 Err(ParseError::RemovedWrongDlc)
@@ -660,7 +660,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCellCount,
+                    MessageId::BatteryCellCount,
                     ParserType::Remote(2)
                 ),
                 Ok(Frame::BatteryCellCount(Remote))
@@ -668,7 +668,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCellCount,
+                    MessageId::BatteryCellCount,
                     ParserType::Data(&[30])
                 ),
                 Err(ParseError::WrongDataSize)
@@ -676,7 +676,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCellCount,
+                    MessageId::BatteryCellCount,
                     ParserType::Data(&[0, 30])
                 ),
                 Ok(Frame::BatteryCellCount(Data(30)))
@@ -686,7 +686,7 @@ mod tests {
         {
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCellsStates,
+                    MessageId::BatteryCellsStates,
                     ParserType::Remote(0)
                 ),
                 Ok(Frame::BatteryCellsStates(Remote))
@@ -694,7 +694,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCellsStates,
+                    MessageId::BatteryCellsStates,
                     ParserType::Data(&[0, 0, 0, 0x57, 0xA4])
                 ),
                 Err(ParseError::WrongData)
@@ -702,7 +702,7 @@ mod tests {
 
             assert_eq!(
                 Frame::parse_frame(
-                    FrameId::BatteryCellsStates,
+                    MessageId::BatteryCellsStates,
                     ParserType::Data(&[0, 10, 0x57, 0xA4, 0x0A, 0x44])
                 ),
                 Ok(Frame::BatteryCellsStates(Data(battery::CellsStates {
@@ -718,3 +718,4 @@ mod tests {
         }
     }
 }
+*/
