@@ -1,23 +1,91 @@
 use crate::message::MessageId;
 use crate::frames::firmware::{UploadPart, UploadPartChangePos};
-use crate::frames::Type::{Data, Remote};
+use crate::frames::Type::{Data, Request};
+//use crate::frames::Type::{Data, Request};
 
-/*pub mod dyn_id;
+pub mod dyn_id;
 pub mod firmware;
 pub mod serial;
 pub mod version;
 pub mod battery;
 
+pub trait CopyIntoSlice {
+    fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize>;
+}
+/*
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Type<T> {
-    Data(T),
-    Remote,
+pub enum Type<D, R>
+where
+    D: TryFrom<&[u8]> + CopyIntoSlice,
+    R: TryFrom<&[u8]> + CopyIntoSlice
+{
+    Data(D),
+    Request(R),
+}
+
+impl<D: CopyIntoSlice, R: CopyIntoSlice> Type<D, R> {
+    pub fn from_slice(is_request: bool, data: &[u8]) -> Option<Self> {
+        match is_request {
+            false => Some(Data(D::try_from(data).ok()?)),
+            true => Some(Request(R::try_from(data).ok()?)),
+        }
+    }
+
+    pub fn into_slice(&self, dst: &mut [u8]) -> Option<(usize, bool)> {
+        match self {
+            Type::Data(data) => Some((data.copy_into_slice(dst)?, false)),
+            Type::Request(data) =>  Some((data.copy_into_slice(dst)?, true)),
+        }
+    }
+}*/
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum Type<D, R>
+/*where
+    D: TryFrom<&[u8]> + CopyIntoSlice,
+    R: TryFrom<&[u8]> + CopyIntoSlice*/
+{
+    Data(D),
+    Request(R),
+}
+
+impl<D: for<'a>TryFrom<&'a [u8]> + CopyIntoSlice, R: for<'b>TryFrom<&'b [u8]> + CopyIntoSlice> Type<D, R> {
+    pub fn from_slice(is_request: bool, data: &[u8]) -> Option<Self> {
+        match is_request {
+            false => Some(Data(D::try_from(data).ok()?)),
+            true => Some(Request(R::try_from(data).ok()?)),
+        }
+    }
+
+    pub fn into_slice(&self, dst: &mut [u8]) -> Option<(usize, bool)> {
+        match self {
+            Type::Data(data) => Some((data.copy_into_slice(dst)?, false)),
+            Type::Request(data) =>  Some((data.copy_into_slice(dst)?, true)),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Empty;
+
+impl TryFrom<&[u8]> for Empty {
+    type Error = ();
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        Ok(Empty)
+    }
+}
+
+impl CopyIntoSlice for Empty {
+    fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
+        Some(0)
+    }
+}
+
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Frame {
-    Serial(Type<serial::Serial>),
-    DynId(dyn_id::Data),
+    Serial(Type<serial::Serial, Empty>),
+    /*DynId(dyn_id::Data),
     HardwareVersion(Type<version::Version>),
     FirmwareVersion(Type<version::Version>),
     PendingFirmwareVersion(Type<Option<version::Version>>),
@@ -31,7 +99,7 @@ pub enum Frame {
     BatteryCurrent(Type<Option<i32>>),
     BatteryVoltageCurrent(Type<Option<(u32, i32)>>),
     BatteryCellCount(Type<u16>),
-    BatteryCellsStates(Type<battery::CellsStates>),
+    BatteryCellsStates(Type<battery::CellsStates>),*/
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -43,7 +111,7 @@ pub enum ParseError {
     RemovedWrongDlc,
     Other,
 }
-
+/*
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ParserType<'a> {
     Data(&'a [u8]),
@@ -62,24 +130,16 @@ impl RawType {
         t.extend(array);
         Self::Data(t)
     }
-}
+}*/
 
 impl Frame {
-    pub fn parse_frame(frame_id: MessageId, data: ParserType) -> Result<Frame, ParseError> {
+    pub fn parse_frame(frame_id: MessageId, data: &[u8], is_request: bool) -> Result<Frame, ParseError> {
         match frame_id {
-            MessageId::Serial => match data {
-                ParserType::Remote(len) => match len {
-                    5 => Ok(Frame::Serial(Remote)),
-                    _l => Err(ParseError::RemovedWrongDlc),
-                },
-                ParserType::Data(data) => match data.len() {
-                    5 => Ok(Frame::Serial(Data(serial::Serial::from(
-                        <[u8; 5]>::try_from(&data[0..5]).unwrap(),
-                    )))),
-                    _ => Err(ParseError::WrongDataSize),
-                },
+            MessageId::Serial => {
+                let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
+                Ok(Frame::Serial(t))
             },
-            MessageId::DynId => match data {
+            /*MessageId::DynId => match data {
                 ParserType::Remote(_) => Err(ParseError::RemoteFrame),
                 ParserType::Data(data) => match data.len() {
                     6 => Ok(Frame::DynId(dyn_id::Data::from(
@@ -212,17 +272,17 @@ impl Frame {
                     .map(|v| Frame::BatteryCellsStates(Data(v)))
                     .map_err(|_| ParseError::WrongData),
                 ParserType::Remote(_len) => Ok(Frame::BatteryCellsStates(Remote)),
-            }
+            }*/
         }
     }
 
-    pub fn raw_frame(&self) -> (MessageId, RawType) {
+
+    pub fn frame_into_slise(&self, dst: &mut [u8]) -> Option<(usize, bool)> {
         match self {
-            Frame::Serial(v) => match v {
-                Remote => (MessageId::Serial, RawType::Remote(5)),
-                Data(v) => (MessageId::Serial, RawType::new_data(v.0)),
+            Frame::Serial(v) =>  {
+                v.into_slice(dst)
             },
-            Frame::DynId(v) => (MessageId::DynId, RawType::new_data(<[u8; 6]>::from(*v))),
+            /*Frame::DynId(v) => (MessageId::DynId, RawType::new_data(<[u8; 6]>::from(*v))),
             n @ Frame::HardwareVersion(v) | n @ Frame::FirmwareVersion(v) => {
                 let id = match n {
                     Frame::HardwareVersion(_) => MessageId::HardwareVersion,
@@ -296,7 +356,7 @@ impl Frame {
                     Remote => RawType::Remote(0),
                     Data(v) => RawType::new_data(arrayvec::ArrayVec::<u8, 8>::from(v)),
                 })
-            }
+            }*/
         }
     }
 
@@ -304,7 +364,7 @@ impl Frame {
     pub fn id(&self) -> MessageId {
         match self {
             Frame::Serial(_) => MessageId::Serial,
-            Frame::DynId(_) => MessageId::DynId,
+            /*Frame::DynId(_) => MessageId::DynId,
             Frame::HardwareVersion(_) => MessageId::HardwareVersion,
             Frame::FirmwareVersion(_) => MessageId::FirmwareVersion,
             Frame::PendingFirmwareVersion(_) => MessageId::PendingFirmwareVersion,
@@ -318,40 +378,43 @@ impl Frame {
             Frame::BatteryCurrent(_) => MessageId::BatteryCurrent,
             Frame::BatteryVoltageCurrent(_) => MessageId::BatteryVoltageCurrent,
             Frame::BatteryCellCount(_) => MessageId::BatteryCellCount,
-            Frame::BatteryCellsStates(_) => MessageId::BatteryCellsStates,
+            Frame::BatteryCellsStates(_) => MessageId::BatteryCellsStates,*/
         }
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::message::MessageId;
-    use crate::frames::ParserType;
 
     #[test]
     fn serial() {
         assert_eq!(
-            Frame::parse_frame(MessageId::Serial, ParserType::Remote(5),),
-            Ok(Frame::Serial(Remote))
+            Frame::parse_frame(MessageId::Serial, &[], true),
+            Ok(Frame::Serial(Type::Request(Empty)))
         );
 
         assert_eq!(
-            Frame::Serial(Remote).raw_frame(),
-            (MessageId::Serial, RawType::Remote(5))
+            Frame::Serial(Type::Request(Empty)).frame_into_slise(&mut [5,5]),
+            Some((0, true))
         );
 
         assert_eq!(
-            Frame::parse_frame(MessageId::Serial, ParserType::Data(&[1, 2, 3, 4, 5])),
+            Frame::parse_frame(MessageId::Serial, &[1, 2, 3, 4, 5], false),
             Ok(Frame::Serial(Data(serial::Serial::from([1, 2, 3, 4, 5]))))
         );
 
+        let mut buf = [5; 50];
+        let r = Frame::Serial(Data(serial::Serial::from([1, 2, 3, 4, 5]))).frame_into_slise(&mut buf).unwrap();
         assert_eq!(
-            Frame::Serial(Data(serial::Serial::from([1, 2, 3, 4, 5]))).raw_frame(),
-            (MessageId::Serial, RawType::new_data([1, 2, 3, 4, 5]))
+            (5usize, false, [1u8, 2, 3, 4, 5].as_slice()),
+            (r.0, r.1, &buf[..5])
         );
     }
-
+/*
     #[test]
     fn dyn_id() {
         assert_eq!(
@@ -716,6 +779,5 @@ mod tests {
                 })))
             );
         }
-    }
+    }*/
 }
-*/

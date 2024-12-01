@@ -29,11 +29,13 @@ impl From<[u8; 2]> for SubId {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, enum_primitive_derive::Primitive)]
 pub enum MessageId {
     Serial = 0,
-    Type = 1,
+    /*Type = 1,
     HardwareVersion = 2,
     FirmwareVersion = 3,
 
     FirmwareUpgrade = 4,
+
+    ModuleBatteryManagerUnit = 20,*/
 
     /*
     PendingFirmwareVersion = 10,
