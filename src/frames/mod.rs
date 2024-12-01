@@ -433,15 +433,6 @@ mod tests {
         none(MessageId::HardwareVersion, Frame::HardwareVersion(Type::Request(Empty)));
 
         fn data(v: version::Version, id: MessageId, res: Frame) {
-            /*let mut buf = [5; 50];
-            let (size, is_request) = res.frame_into_slise(&mut buf).unwrap();
-            assert_eq!(size, 0);
-            assert_eq!(is_request, true);
-
-            assert_eq!(Frame::parse_frame(id, &buf, true), Ok(res));*/
-
-
-
             assert_eq!(
                 Frame::parse_frame(id, &<[u8; 8]>::from(v), false),
                 Ok(res.clone())
@@ -449,8 +440,9 @@ mod tests {
 
             let mut buf = [5; 50];
             let (size, is_request) = res.frame_into_slise(&mut buf).unwrap();
-
-            assert_eq!(res.raw_frame(), (id, RawType::new_data(<[u8; 8]>::from(v))));
+            assert_eq!(size, 8);
+            assert_eq!(is_request, false);
+            assert_eq!(buf[0..size], <[u8; 8]>::from(v));
         }
         let v = version::Version {
             major: 1,
