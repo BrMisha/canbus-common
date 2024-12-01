@@ -1,3 +1,5 @@
+use crate::frames::serial::Serial;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Version {
     pub major: u8,
@@ -23,6 +25,30 @@ impl From<Version> for [u8; 8] {
         data[2..4].clone_from_slice(&v.path.to_be_bytes());
         data[4..8].clone_from_slice(&v.build.to_be_bytes());
         data
+    }
+}
+
+impl TryFrom<&[u8]> for Version {
+    type Error = ();
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let arr: [u8; 8] = value.try_into().map_err(|_| ())?;
+        Ok(Self::from(arr))
+    }
+}
+
+impl crate::frames::CopyIntoSlice for Version {
+    fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
+        match dst.get_mut(0..8) {
+            Some(x) => {
+                x[0] = self.major;
+                x[1] = self.minor;
+                x[2..4].clone_from_slice(&self.path.to_be_bytes());
+                x[4..8].clone_from_slice(&self.build.to_be_bytes());
+                Some(x.len())
+            },
+            None => None,
+        }
     }
 }
 
