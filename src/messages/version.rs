@@ -25,7 +25,7 @@ impl TryFrom<&[u8]> for Version {
                 path: u16::from_be_bytes(<[u8; 2]>::try_from(&value[2..4]).unwrap()),
                 build: u32::from_be_bytes(<[u8; 4]>::try_from(&value[4..8]).unwrap()),
             }),
-            None => Err(())
+            None => Err(()),
         }
     }
 }
@@ -47,7 +47,7 @@ impl CopyIntoSlice for Version {
                 x[2..4].clone_from_slice(&self.path.to_be_bytes());
                 x[4..8].clone_from_slice(&self.build.to_be_bytes());
                 Some(x.len())
-            },
+            }
             None => None,
         }
     }

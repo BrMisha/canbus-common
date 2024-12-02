@@ -1,7 +1,7 @@
+use crate::messages::helpers::CopyIntoSlice;
 use core::fmt;
 use core::fmt::Debug;
 use hex::ToHex;
-use crate::messages::helpers::CopyIntoSlice;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Serial(pub [u8; 5]);
@@ -39,7 +39,7 @@ impl TryFrom<&str> for Serial {
 
         let mut buff: [u8; 5] = Default::default();
         for i in 0..5 {
-            buff[i] = u8::from_str_radix(&value[(i*2)..(i*2+2)], 16).unwrap()
+            buff[i] = u8::from_str_radix(&value[(i * 2)..(i * 2 + 2)], 16).unwrap()
         }
 
         Ok(Self::from(buff))
@@ -58,7 +58,7 @@ impl CopyIntoSlice for Serial {
             Some(x) => {
                 x.copy_from_slice(&self.0);
                 Some(x.len())
-            },
+            }
             None => None,
         }
     }
@@ -90,6 +90,9 @@ mod tests {
 
         assert_eq!(<heapless::String<10>>::from(&s).as_str(), "0102030405");
 
-        assert_eq!(Serial::try_from("010203FFFE").unwrap().0, [1, 2, 3, 255, 254]);
+        assert_eq!(
+            Serial::try_from("010203FFFE").unwrap().0,
+            [1, 2, 3, 255, 254]
+        );
     }
 }

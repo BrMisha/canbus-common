@@ -1,5 +1,3 @@
-use num_traits::FromPrimitive;
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct SubId(pub u16);
 
@@ -37,12 +35,12 @@ pub enum MessageId {
     FirmwareUploadPause = 12,         // to host
     FirmwareUploadPart = 13,          // from host
     FirmwareStartUpdate = 14,         // from host
-    FirmwareUploadFinished = 15,         // from host
+    FirmwareUploadFinished = 15,      // from host
 }
 
 #[cfg(test)]
 mod tests {
-    //use crate::messages::Frame;
+    use num_traits::FromPrimitive;
     use super::*;
 
     #[test]

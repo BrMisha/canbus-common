@@ -1,4 +1,3 @@
-
 pub trait CopyIntoSlice {
     fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize>;
 }
