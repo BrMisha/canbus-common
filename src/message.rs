@@ -1,5 +1,4 @@
 use num_traits::FromPrimitive;
-use num_traits::ToPrimitive;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct SubId(pub u16);

@@ -103,7 +103,7 @@ impl Message {
             MessageId::FirmwareUploadPause => {
                 match is_request {
                     false => {
-                        let v = *(data.get(0).ok_or(ParseError::WrongDataSize)?) != 0;
+                        let v = *(data.first().ok_or(ParseError::WrongDataSize)?) != 0;
                         Ok(Message::FirmwareUploadPause(Type::Data(v)))
                     }
                     true => Err(ParseError::RemoteFrame),
@@ -193,7 +193,7 @@ mod tests {
             let mut buf = [5; 50];
             let (size, is_request) = res.message_into_slise(&mut buf).unwrap();
             assert_eq!(size, 0);
-            assert_eq!(is_request, true);
+            assert!(is_request);
 
             assert_eq!(Message::parse_message(id, &buf, true), Ok(res));
         }
@@ -210,7 +210,7 @@ mod tests {
             let mut buf = [5; 50];
             let (size, is_request) = res.message_into_slise(&mut buf).unwrap();
             assert_eq!(size, 8);
-            assert_eq!(is_request, false);
+            assert!(!is_request);
             assert_eq!(buf[0..size], <[u8; 8]>::from(v));
         }
         let v = version::Version {
@@ -242,7 +242,7 @@ mod tests {
             Type::Data(firmware::UploadPartChangePos::new(0x010203usize).unwrap())
         ).message_into_slise(&mut buf).unwrap();
 
-        assert_eq!(is_request, false);
+        assert!(!is_request);
         assert_eq!(buf.get(..size).unwrap(), &[0x01, 0x02, 0x03]);
 
     }
@@ -267,11 +267,11 @@ mod tests {
 
         let mut buf = [0; 10];
         let (size, is_request) = Message::FirmwareUploadPause(Type::Data(false)).message_into_slise(&mut buf).unwrap();
-        assert_eq!(is_request, false);
+        assert!(!is_request);
         assert_eq!(buf[0..size].as_ref(), [0u8,].as_ref());
 
         let (size, is_request) = Message::FirmwareUploadPause(Type::Data(true)).message_into_slise(&mut buf).unwrap();
-        assert_eq!(is_request, false);
+        assert!(!is_request);
         assert_eq!(buf[0..size].as_ref(), [1u8,].as_ref());
     }
 
@@ -301,7 +301,7 @@ mod tests {
         let (size, is_request) = Message::FirmwareUploadPart(
             Type::Data(firmware::UploadPart::new(0x010203usize, [1, 2, 3, 4, 5]).unwrap())
         ).message_into_slise(&mut buf).unwrap();
-        assert_eq!(is_request, false);
+        assert!(!is_request);
         assert_eq!(buf[..size].as_ref(), [0x01, 0x02, 0x03, 1, 2, 3, 4, 5].as_ref());
     }
 
@@ -319,7 +319,7 @@ mod tests {
 
         let mut buf = [0; 10];
         let (size, is_request) = Message::FirmwareStartUpdate.message_into_slise(&mut buf).unwrap();
-        assert_eq!(is_request, false);
+        assert!(!is_request);
         assert_eq!(buf[..size].as_ref(), &[]);
     }
 }
