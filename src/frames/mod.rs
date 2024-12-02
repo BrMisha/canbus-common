@@ -104,8 +104,8 @@ pub enum Frame {
     FirmwareUploadPartChangePos(Type<firmware::UploadPartChangePos, Empty>),
     FirmwareUploadPause(Type<bool, Empty>),
     FirmwareUploadPart(Type<firmware::UploadPart, Empty>),
-    //FirmwareUploadFinished,
-    //FirmwareStartUpdate,
+    FirmwareStartUpdate,
+    FirmwareUploadFinished,
     /*
         BatteryVoltage(Type<Option<u32>>),
         BatteryCurrent(Type<Option<i32>>),
@@ -179,23 +179,15 @@ impl Frame {
             MessageId::FirmwareUploadPart => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
                 Ok(Frame::FirmwareUploadPart(t))
-
-                /*ParserType::Remote(_) => Err(ParseError::RemoteFrame),
-                ParserType::Data(data) => match data.len() {
-                    8 => Ok(Frame::FirmwareUploadPart(UploadPart::from(
-                        <[u8; 8]>::try_from(&data[..8]).unwrap(),
-                    ))),
-                    _ => Err(ParseError::WrongDataSize),
-                },*/
-            },/*
-            MessageId::FirmwareUploadFinished => match data {
-                ParserType::Remote(_) => Err(ParseError::RemoteFrame),
-                ParserType::Data(_) => Ok(Frame::FirmwareUploadFinished),
             },
-            MessageId::FirmwareStartUpdate => match data {
-                ParserType::Remote(_) => Err(ParseError::RemoteFrame),
-                ParserType::Data(_) => Ok(Frame::FirmwareStartUpdate),
-            },*/
+            MessageId::FirmwareStartUpdate => match is_request {
+                true => Err(ParseError::RemoteFrame),
+                false => Ok(Frame::FirmwareStartUpdate),
+            },
+            MessageId::FirmwareUploadFinished => match is_request {
+                true => Err(ParseError::RemoteFrame),
+                false => Ok(Frame::FirmwareUploadFinished),
+            },/**/
             /*
                         MessageId::BatteryVoltage => match data {
                             ParserType::Data(data) => match data.len() {
@@ -264,12 +256,9 @@ impl Frame {
             Frame::FirmwareUploadPartChangePos(v) => v.into_slice(dst),
             Frame::FirmwareUploadPause(v) => v.into_slice(dst),
             Frame::FirmwareUploadPart(v) => v.into_slice(dst),
+            Frame::FirmwareStartUpdate => Some((0, false)),
+            Frame::FirmwareUploadFinished => Some((0, false)),
             /*
-            Frame::FirmwareStartUpdate => (MessageId::FirmwareStartUpdate, RawType::new_data([])),
-            Frame::FirmwareUploadFinished => {
-                (MessageId::FirmwareUploadFinished, RawType::new_data([]))
-            },
-
             Frame::BatteryVoltage(v) => {
                 (MessageId::BatteryVoltage, match v {
                     Remote => RawType::Remote(4),
@@ -321,9 +310,9 @@ impl Frame {
             Frame::FirmwareUploadPartChangePos(_) => MessageId::FirmwareUploadPartChangePos,
             Frame::FirmwareUploadPause(_) => MessageId::FirmwareUploadPause,
             Frame::FirmwareUploadPart(_) => MessageId::FirmwareUploadPart,
-            /*
             Frame::FirmwareStartUpdate => MessageId::FirmwareStartUpdate,
             Frame::FirmwareUploadFinished => MessageId::FirmwareUploadFinished,
+            /*
 
             Frame::BatteryVoltage(_) => MessageId::BatteryVoltage,
             Frame::BatteryCurrent(_) => MessageId::BatteryCurrent,
@@ -481,28 +470,27 @@ mod tests {
             Type::Data(firmware::UploadPart::new(0x010203usize, [1, 2, 3, 4, 5]).unwrap())
         ).frame_into_slise(&mut buf).unwrap();
         assert_eq!(is_request, false);
-
         assert_eq!(buf[..size].as_ref(), [0x01, 0x02, 0x03, 1, 2, 3, 4, 5].as_ref());
     }
+
+    #[test]
+    fn firmware_start_update() {
+        assert_eq!(
+            Frame::parse_frame(MessageId::FirmwareStartUpdate, [1, 1].as_ref(), true),
+            Err(ParseError::RemoteFrame)
+        );
+
+        assert_eq!(
+            Frame::parse_frame(MessageId::FirmwareStartUpdate, &[], false),
+            Ok(Frame::FirmwareStartUpdate)
+        );
+
+        let mut buf = [0; 10];
+        let (size, is_request) = Frame::FirmwareStartUpdate.frame_into_slise(&mut buf).unwrap();
+        assert_eq!(is_request, false);
+        assert_eq!(buf[..size].as_ref(), &[]);
+    }
     /*
-        #[test]
-        fn firmware_start_update() {
-            assert_eq!(
-                Frame::parse_frame(MessageId::FirmwareStartUpdate, ParserType::Remote(1)),
-                Err(ParseError::RemoteFrame)
-            );
-
-            assert_eq!(
-                Frame::parse_frame(MessageId::FirmwareStartUpdate, ParserType::Data(&[])),
-                Ok(Frame::FirmwareStartUpdate)
-            );
-
-            assert_eq!(
-                Frame::FirmwareStartUpdate.raw_frame(),
-                (MessageId::FirmwareStartUpdate, RawType::new_data([]))
-            );
-        }
-
 
         #[test]
         fn battery() {
