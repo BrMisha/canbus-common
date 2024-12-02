@@ -3,7 +3,6 @@ use crate::frames::firmware::{UploadPart, UploadPartChangePos};
 use crate::frames::Type::{Data, Request};
 //use crate::frames::Type::{Data, Request};
 
-pub mod dyn_id;
 pub mod firmware;
 pub mod serial;
 pub mod version;

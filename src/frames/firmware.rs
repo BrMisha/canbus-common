@@ -1,4 +1,7 @@
 use core::ops::{Deref, DerefMut};
+use num_traits::ToBytes;
+use crate::frames::CopyIntoSlice;
+use crate::frames::version::Version;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct UploadPartChangePos(usize);
@@ -29,8 +32,22 @@ impl From<[u8; 3]> for UploadPartChangePos {
 
 impl From<UploadPartChangePos> for [u8; 3] {
     fn from(v: UploadPartChangePos) -> Self {
-        let arr: [u8; 4] = (v.0 as u32).to_be_bytes();
-        arr[1..].try_into().unwrap()
+        let mut arr: [u8; 3] = [0; 3];
+        v.copy_into_slice(&mut arr).unwrap();
+        arr
+    }
+}
+
+impl crate::frames::CopyIntoSlice for UploadPartChangePos {
+    fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
+        match dst.get_mut(0..3) {
+            Some(x) => {
+                let arr: [u8; 4] = (self.0 as u32).to_be_bytes();
+                x.clone_from_slice(&arr[1..]);
+                Some(x.len())
+            },
+            None => None,
+        }
     }
 }
 
@@ -71,10 +88,21 @@ impl From<[u8; 8]> for UploadPart {
 impl From<UploadPart> for [u8; 8] {
     fn from(v: UploadPart) -> Self {
         let mut ar: [u8; 8] = Default::default();
-        ar[..3].clone_from_slice((v.position as u32).to_be_bytes()[1..].try_into().unwrap());
-        ar[3..].clone_from_slice(&v.data);
-
+        v.copy_into_slice(&mut ar).unwrap();
         ar
+    }
+}
+
+impl crate::frames::CopyIntoSlice for UploadPart {
+    fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
+        match dst.get_mut(0..8) {
+            Some(x) => {
+                x[..3].clone_from_slice((self.position as u32).to_be_bytes()[1..].try_into().unwrap());
+                x[3..].clone_from_slice(&self.data);
+                Some(x.len())
+            },
+            None => None,
+        }
     }
 }
 

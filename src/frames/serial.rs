@@ -1,6 +1,7 @@
 use core::fmt;
 use core::fmt::Debug;
 use hex::ToHex;
+use crate::frames::CopyIntoSlice;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Serial(pub [u8; 5]);
@@ -13,7 +14,9 @@ impl From<[u8; 5]> for Serial {
 
 impl From<Serial> for [u8; 5] {
     fn from(v: Serial) -> Self {
-        v.0
+        let mut arr: [u8; 5] = Default::default();
+        v.copy_into_slice(&mut arr).unwrap();
+        arr
     }
 }
 
@@ -54,7 +57,7 @@ impl crate::frames::CopyIntoSlice for Serial {
         match dst.get_mut(0..self.0.len()) {
             Some(x) => {
                 x.copy_from_slice(&self.0);
-                Some(self.0.len())
+                Some(x.len())
             },
             None => None,
         }
