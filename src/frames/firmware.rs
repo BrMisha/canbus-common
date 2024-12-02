@@ -1,7 +1,6 @@
 use core::ops::{Deref, DerefMut};
 use num_traits::ToBytes;
 use crate::frames::CopyIntoSlice;
-use crate::frames::version::Version;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct UploadPartChangePos(usize);
@@ -24,9 +23,22 @@ impl UploadPartChangePos {
 
 impl From<[u8; 3]> for UploadPartChangePos {
     fn from(val: [u8; 3]) -> Self {
-        let mut ar: [u8; 4] = [0, 0, 0, 0];
-        ar[1..].clone_from_slice(val[..].try_into().unwrap());
-        UploadPartChangePos(u32::from_be_bytes(ar) as usize)
+        Self::try_from(val.as_ref()).unwrap()
+    }
+}
+
+impl TryFrom<&[u8]> for UploadPartChangePos {
+    type Error = ();
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match value.get(0..3) {
+            Some(value) => {
+                let mut ar: [u8; 4] = [0, 0, 0, 0];
+                ar[1..].clone_from_slice(value[..].as_ref());
+                Ok(UploadPartChangePos(u32::from_be_bytes(ar) as usize))
+            }
+            _ => Err(())
+        }
     }
 }
 
@@ -73,14 +85,27 @@ impl UploadPart {
 
 impl From<[u8; 8]> for UploadPart {
     fn from(val: [u8; 8]) -> Self {
-        UploadPart {
-            position: {
-                // use first 3 bytes
-                let mut ar: [u8; 4] = [0, 0, 0, 0];
-                ar[1..].clone_from_slice(val[..3].try_into().unwrap());
-                u32::from_be_bytes(ar) as usize
-            },
-            data: val[3..].try_into().unwrap(),
+        Self::try_from(val.as_ref()).unwrap()
+    }
+}
+
+impl TryFrom<&[u8]> for UploadPart {
+    type Error = ();
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match (value.get(0..3), value.get(3..8)) {
+            (Some(position_), Some(data_)) => {
+                Ok(UploadPart {
+                    position: {
+                        // use first 3 bytes
+                        let mut ar: [u8; 4] = [0, 0, 0, 0];
+                        ar[1..].clone_from_slice(position_.as_ref());
+                        u32::from_be_bytes(ar) as usize
+                    },
+                    data: data_.try_into().unwrap(),
+                })
+            }
+            _ => Err(()),
         }
     }
 }

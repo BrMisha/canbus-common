@@ -12,6 +12,15 @@ impl From<[u8; 5]> for Serial {
     }
 }
 
+impl TryFrom<&[u8]> for Serial {
+    type Error = ();
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let arr: [u8; 5] = value.try_into().map_err(|_| ())?;
+        Ok(Self(arr))
+    }
+}
+
 impl From<Serial> for [u8; 5] {
     fn from(v: Serial) -> Self {
         let mut arr: [u8; 5] = Default::default();
@@ -40,15 +49,6 @@ impl TryFrom<&str> for Serial {
 impl From<&Serial> for heapless::String<10> {
     fn from(v: &Serial) -> Self {
         v.0.encode_hex::<heapless::String<10>>()
-    }
-}
-
-impl TryFrom<&[u8]> for Serial {
-    type Error = ();
-
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let arr: [u8; 5] = value.try_into().map_err(|_| ())?;
-        Ok(Self(arr))
     }
 }
 

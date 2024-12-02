@@ -11,11 +11,22 @@ pub struct Version {
 
 impl From<[u8; 8]> for Version {
     fn from(v: [u8; 8]) -> Self {
-        Self {
-            major: v[0],
-            minor: v[1],
-            path: u16::from_be_bytes(<[u8; 2]>::try_from(&v[2..4]).unwrap()),
-            build: u32::from_be_bytes(<[u8; 4]>::try_from(&v[4..8]).unwrap()),
+        Self::try_from(v.as_ref()).unwrap()
+    }
+}
+
+impl TryFrom<&[u8]> for Version {
+    type Error = ();
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match value.get(0..8) {
+            Some(value) => Ok(Self {
+                major: value[0],
+                minor: value[1],
+                path: u16::from_be_bytes(<[u8; 2]>::try_from(&value[2..4]).unwrap()),
+                build: u32::from_be_bytes(<[u8; 4]>::try_from(&value[4..8]).unwrap()),
+            }),
+            None => Err(())
         }
     }
 }
@@ -25,15 +36,6 @@ impl From<Version> for [u8; 8] {
         let mut data: [u8; 8] = [0; 8];
         v.copy_into_slice(&mut data);
         data
-    }
-}
-
-impl TryFrom<&[u8]> for Version {
-    type Error = ();
-
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let arr: [u8; 8] = value.try_into().map_err(|_| ())?;
-        Ok(Self::from(arr))
     }
 }
 
