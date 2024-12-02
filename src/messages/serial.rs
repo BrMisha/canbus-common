@@ -1,7 +1,7 @@
 use core::fmt;
 use core::fmt::Debug;
 use hex::ToHex;
-use crate::frames::helpers::CopyIntoSlice;
+use crate::messages::helpers::CopyIntoSlice;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Serial(pub [u8; 5]);

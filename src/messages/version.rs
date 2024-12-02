@@ -1,4 +1,4 @@
-use crate::frames::helpers::CopyIntoSlice;
+use crate::messages::helpers::CopyIntoSlice;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Version {

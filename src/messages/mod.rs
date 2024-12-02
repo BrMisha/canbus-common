@@ -55,7 +55,7 @@ impl helpers::CopyIntoSlice for Empty {
 
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Frame {
+pub enum Message {
     Serial(Type<serial::Serial, Empty>),
     HardwareVersion(Type<version::Version, Empty>),
     FirmwareVersion(Type<version::Version, Empty>),
@@ -77,80 +77,80 @@ pub enum ParseError {
     Other,
 }
 
-impl Frame {
-    pub fn parse_frame(frame_id: MessageId, data: &[u8], is_request: bool) -> Result<Frame, ParseError> {
-        match frame_id {
+impl Message {
+    pub fn parse_message(message_id: MessageId, data: &[u8], is_request: bool) -> Result<Message, ParseError> {
+        match message_id {
             MessageId::Serial => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
-                Ok(Frame::Serial(t))
+                Ok(Message::Serial(t))
             },
             MessageId::HardwareVersion => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
-                Ok(Frame::HardwareVersion(t))
+                Ok(Message::HardwareVersion(t))
             },
             MessageId::FirmwareVersion => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
-                Ok(Frame::FirmwareVersion(t))
+                Ok(Message::FirmwareVersion(t))
             }
             MessageId::PendingFirmwareVersion => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
-                Ok(Frame::PendingFirmwareVersion(t))
+                Ok(Message::PendingFirmwareVersion(t))
             },
             MessageId::FirmwareUploadPartChangePos => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
-                Ok(Frame::FirmwareUploadPartChangePos(t))
+                Ok(Message::FirmwareUploadPartChangePos(t))
             },
             MessageId::FirmwareUploadPause => {
                 match is_request {
                     false => {
                         let v = *(data.get(0).ok_or(ParseError::WrongDataSize)?) != 0;
-                        Ok(Frame::FirmwareUploadPause(Type::Data(v)))
+                        Ok(Message::FirmwareUploadPause(Type::Data(v)))
                     }
                     true => Err(ParseError::RemoteFrame),
                 }
             },
             MessageId::FirmwareUploadPart => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
-                Ok(Frame::FirmwareUploadPart(t))
+                Ok(Message::FirmwareUploadPart(t))
             },
             MessageId::FirmwareStartUpdate => match is_request {
                 true => Err(ParseError::RemoteFrame),
-                false => Ok(Frame::FirmwareStartUpdate),
+                false => Ok(Message::FirmwareStartUpdate),
             },
             MessageId::FirmwareUploadFinished => match is_request {
                 true => Err(ParseError::RemoteFrame),
-                false => Ok(Frame::FirmwareUploadFinished),
+                false => Ok(Message::FirmwareUploadFinished),
             },
         }
     }
 
 
-    pub fn frame_into_slise(&self, dst: &mut [u8]) -> Option<(usize, bool)> {
+    pub fn message_into_slise(&self, dst: &mut [u8]) -> Option<(usize, bool)> {
         match self {
-            Frame::Serial(v) =>  v.into_slice(dst),
-            Frame::HardwareVersion(v) => v.into_slice(dst),
-            Frame::FirmwareVersion(v) =>  v.into_slice(dst),
-            Frame::PendingFirmwareVersion(v) => v.into_slice(dst),
-            Frame::FirmwareUploadPartChangePos(v) => v.into_slice(dst),
-            Frame::FirmwareUploadPause(v) => v.into_slice(dst),
-            Frame::FirmwareUploadPart(v) => v.into_slice(dst),
-            Frame::FirmwareStartUpdate => Some((0, false)),
-            Frame::FirmwareUploadFinished => Some((0, false)),
+            Message::Serial(v) =>  v.into_slice(dst),
+            Message::HardwareVersion(v) => v.into_slice(dst),
+            Message::FirmwareVersion(v) =>  v.into_slice(dst),
+            Message::PendingFirmwareVersion(v) => v.into_slice(dst),
+            Message::FirmwareUploadPartChangePos(v) => v.into_slice(dst),
+            Message::FirmwareUploadPause(v) => v.into_slice(dst),
+            Message::FirmwareUploadPart(v) => v.into_slice(dst),
+            Message::FirmwareStartUpdate => Some((0, false)),
+            Message::FirmwareUploadFinished => Some((0, false)),
         }
     }
 
     #[inline]
     pub fn id(&self) -> MessageId {
         match self {
-            Frame::Serial(_) => MessageId::Serial,
-            Frame::HardwareVersion(_) => MessageId::HardwareVersion,
-            Frame::FirmwareVersion(_) => MessageId::FirmwareVersion,
-            Frame::PendingFirmwareVersion(_) => MessageId::PendingFirmwareVersion,
-            Frame::FirmwareUploadPartChangePos(_) => MessageId::FirmwareUploadPartChangePos,
-            Frame::FirmwareUploadPause(_) => MessageId::FirmwareUploadPause,
-            Frame::FirmwareUploadPart(_) => MessageId::FirmwareUploadPart,
-            Frame::FirmwareStartUpdate => MessageId::FirmwareStartUpdate,
-            Frame::FirmwareUploadFinished => MessageId::FirmwareUploadFinished,
+            Message::Serial(_) => MessageId::Serial,
+            Message::HardwareVersion(_) => MessageId::HardwareVersion,
+            Message::FirmwareVersion(_) => MessageId::FirmwareVersion,
+            Message::PendingFirmwareVersion(_) => MessageId::PendingFirmwareVersion,
+            Message::FirmwareUploadPartChangePos(_) => MessageId::FirmwareUploadPartChangePos,
+            Message::FirmwareUploadPause(_) => MessageId::FirmwareUploadPause,
+            Message::FirmwareUploadPart(_) => MessageId::FirmwareUploadPart,
+            Message::FirmwareStartUpdate => MessageId::FirmwareStartUpdate,
+            Message::FirmwareUploadFinished => MessageId::FirmwareUploadFinished,
         }
     }
 }
@@ -165,22 +165,22 @@ mod tests {
     #[test]
     fn serial() {
         assert_eq!(
-            Frame::parse_frame(MessageId::Serial, &[], true),
-            Ok(Frame::Serial(Type::Request(Empty)))
+            Message::parse_message(MessageId::Serial, &[], true),
+            Ok(Message::Serial(Type::Request(Empty)))
         );
 
         assert_eq!(
-            Frame::Serial(Type::Request(Empty)).frame_into_slise(&mut [5,5]),
+            Message::Serial(Type::Request(Empty)).message_into_slise(&mut [5,5]),
             Some((0, true))
         );
 
         assert_eq!(
-            Frame::parse_frame(MessageId::Serial, &[1, 2, 3, 4, 5], false),
-            Ok(Frame::Serial(Type::Data(serial::Serial::from([1, 2, 3, 4, 5]))))
+            Message::parse_message(MessageId::Serial, &[1, 2, 3, 4, 5], false),
+            Ok(Message::Serial(Type::Data(serial::Serial::from([1, 2, 3, 4, 5]))))
         );
 
         let mut buf = [5; 50];
-        let r = Frame::Serial(Type::Data(serial::Serial::from([1, 2, 3, 4, 5]))).frame_into_slise(&mut buf).unwrap();
+        let r = Message::Serial(Type::Data(serial::Serial::from([1, 2, 3, 4, 5]))).message_into_slise(&mut buf).unwrap();
         assert_eq!(
             (5usize, false, [1u8, 2, 3, 4, 5].as_slice()),
             (r.0, r.1, &buf[..5])
@@ -189,26 +189,26 @@ mod tests {
 
     #[test]
     fn version() {
-        fn none(id: MessageId, res: Frame) {
+        fn none(id: MessageId, res: Message) {
             let mut buf = [5; 50];
-            let (size, is_request) = res.frame_into_slise(&mut buf).unwrap();
+            let (size, is_request) = res.message_into_slise(&mut buf).unwrap();
             assert_eq!(size, 0);
             assert_eq!(is_request, true);
 
-            assert_eq!(Frame::parse_frame(id, &buf, true), Ok(res));
+            assert_eq!(Message::parse_message(id, &buf, true), Ok(res));
         }
-        none(MessageId::FirmwareVersion, Frame::FirmwareVersion(Type::Request(Empty)));
-        none(MessageId::HardwareVersion, Frame::HardwareVersion(Type::Request(Empty)));
-        none(MessageId::PendingFirmwareVersion, Frame::PendingFirmwareVersion(Type::Request(Empty)));
+        none(MessageId::FirmwareVersion, Message::FirmwareVersion(Type::Request(Empty)));
+        none(MessageId::HardwareVersion, Message::HardwareVersion(Type::Request(Empty)));
+        none(MessageId::PendingFirmwareVersion, Message::PendingFirmwareVersion(Type::Request(Empty)));
 
-        fn data(v: version::Version, id: MessageId, res: Frame) {
+        fn data(v: version::Version, id: MessageId, res: Message) {
             assert_eq!(
-                Frame::parse_frame(id, &<[u8; 8]>::from(v), false),
+                Message::parse_message(id, &<[u8; 8]>::from(v), false),
                 Ok(res.clone())
             );
 
             let mut buf = [5; 50];
-            let (size, is_request) = res.frame_into_slise(&mut buf).unwrap();
+            let (size, is_request) = res.message_into_slise(&mut buf).unwrap();
             assert_eq!(size, 8);
             assert_eq!(is_request, false);
             assert_eq!(buf[0..size], <[u8; 8]>::from(v));
@@ -219,28 +219,28 @@ mod tests {
             path: 3,
             build: 9864,
         };
-        data(v, MessageId::FirmwareVersion, Frame::FirmwareVersion(Type::Data(v)));
-        data(v, MessageId::HardwareVersion, Frame::HardwareVersion(Type::Data(v)));
-        data(v, MessageId::PendingFirmwareVersion, Frame::PendingFirmwareVersion(Type::Data(v)));
+        data(v, MessageId::FirmwareVersion, Message::FirmwareVersion(Type::Data(v)));
+        data(v, MessageId::HardwareVersion, Message::HardwareVersion(Type::Data(v)));
+        data(v, MessageId::PendingFirmwareVersion, Message::PendingFirmwareVersion(Type::Data(v)));
     }
 
     #[test]
     fn firmware_upload_part_change_pos() {
         assert_eq!(
-            Frame::parse_frame(
+            Message::parse_message(
                 MessageId::FirmwareUploadPartChangePos,
                 &[0x01, 0x02, 0x03],
                 false
             ),
-            Ok(Frame::FirmwareUploadPartChangePos(
+            Ok(Message::FirmwareUploadPartChangePos(
                 Type::Data(firmware::UploadPartChangePos::new(0x010203usize).unwrap())
             ))
         );
 
         let mut buf = [5; 50];
-        let (size, is_request) = Frame::FirmwareUploadPartChangePos(
+        let (size, is_request) = Message::FirmwareUploadPartChangePos(
             Type::Data(firmware::UploadPartChangePos::new(0x010203usize).unwrap())
-        ).frame_into_slise(&mut buf).unwrap();
+        ).message_into_slise(&mut buf).unwrap();
 
         assert_eq!(is_request, false);
         assert_eq!(buf.get(..size).unwrap(), &[0x01, 0x02, 0x03]);
@@ -250,27 +250,27 @@ mod tests {
     #[test]
     fn firmware_upload_pause() {
         assert_eq!(
-            Frame::parse_frame(MessageId::FirmwareUploadPause, [1u8].as_slice(), true),
+            Message::parse_message(MessageId::FirmwareUploadPause, [1u8].as_slice(), true),
             Err(ParseError::RemoteFrame)
         );
 
         assert_eq!(
-            Frame::parse_frame(MessageId::FirmwareUploadPause, [1u8].as_slice(), false),
-            Ok(Frame::FirmwareUploadPause(Type::Data(true)))
+            Message::parse_message(MessageId::FirmwareUploadPause, [1u8].as_slice(), false),
+            Ok(Message::FirmwareUploadPause(Type::Data(true)))
         );
 
         assert_eq!(
-            Frame::parse_frame(MessageId::FirmwareUploadPause, [0u8].as_slice(), false),
-            Ok(Frame::FirmwareUploadPause(Type::Data(false)))
+            Message::parse_message(MessageId::FirmwareUploadPause, [0u8].as_slice(), false),
+            Ok(Message::FirmwareUploadPause(Type::Data(false)))
         );
 
 
         let mut buf = [0; 10];
-        let (size, is_request) = Frame::FirmwareUploadPause(Type::Data(false)).frame_into_slise(&mut buf).unwrap();
+        let (size, is_request) = Message::FirmwareUploadPause(Type::Data(false)).message_into_slise(&mut buf).unwrap();
         assert_eq!(is_request, false);
         assert_eq!(buf[0..size].as_ref(), [0u8,].as_ref());
 
-        let (size, is_request) = Frame::FirmwareUploadPause(Type::Data(true)).frame_into_slise(&mut buf).unwrap();
+        let (size, is_request) = Message::FirmwareUploadPause(Type::Data(true)).message_into_slise(&mut buf).unwrap();
         assert_eq!(is_request, false);
         assert_eq!(buf[0..size].as_ref(), [1u8,].as_ref());
     }
@@ -278,7 +278,7 @@ mod tests {
     #[test]
     fn firmware_upload_part() {
         assert_eq!(
-            Frame::parse_frame(
+            Message::parse_message(
                 MessageId::FirmwareUploadPart,
                 &[0x01, 0x02, 0x03, 1, 2, 3, 4],
                 false
@@ -287,20 +287,20 @@ mod tests {
         );
 
         assert_eq!(
-            Frame::parse_frame(
+            Message::parse_message(
                 MessageId::FirmwareUploadPart,
                 &[0x01, 0x02, 0x03, 1, 2, 3, 4, 5],
                 false
             ),
-            Ok(Frame::FirmwareUploadPart(
+            Ok(Message::FirmwareUploadPart(
                 Type::Data(firmware::UploadPart::new(0x010203usize, [1, 2, 3, 4, 5]).unwrap())
             ))
         );
 
         let mut buf = [0; 10];
-        let (size, is_request) = Frame::FirmwareUploadPart(
+        let (size, is_request) = Message::FirmwareUploadPart(
             Type::Data(firmware::UploadPart::new(0x010203usize, [1, 2, 3, 4, 5]).unwrap())
-        ).frame_into_slise(&mut buf).unwrap();
+        ).message_into_slise(&mut buf).unwrap();
         assert_eq!(is_request, false);
         assert_eq!(buf[..size].as_ref(), [0x01, 0x02, 0x03, 1, 2, 3, 4, 5].as_ref());
     }
@@ -308,17 +308,17 @@ mod tests {
     #[test]
     fn firmware_start_update() {
         assert_eq!(
-            Frame::parse_frame(MessageId::FirmwareStartUpdate, [1, 1].as_ref(), true),
+            Message::parse_message(MessageId::FirmwareStartUpdate, [1, 1].as_ref(), true),
             Err(ParseError::RemoteFrame)
         );
 
         assert_eq!(
-            Frame::parse_frame(MessageId::FirmwareStartUpdate, &[], false),
-            Ok(Frame::FirmwareStartUpdate)
+            Message::parse_message(MessageId::FirmwareStartUpdate, &[], false),
+            Ok(Message::FirmwareStartUpdate)
         );
 
         let mut buf = [0; 10];
-        let (size, is_request) = Frame::FirmwareStartUpdate.frame_into_slise(&mut buf).unwrap();
+        let (size, is_request) = Message::FirmwareStartUpdate.message_into_slise(&mut buf).unwrap();
         assert_eq!(is_request, false);
         assert_eq!(buf[..size].as_ref(), &[]);
     }

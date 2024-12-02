@@ -1,6 +1,6 @@
 use core::ops::{Deref, DerefMut};
 use num_traits::ToBytes;
-use crate::frames::helpers::CopyIntoSlice;
+use crate::messages::helpers::CopyIntoSlice;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct UploadPartChangePos(usize);
