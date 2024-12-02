@@ -1,7 +1,7 @@
 use core::fmt;
 use core::fmt::Debug;
 use hex::ToHex;
-use crate::frames::CopyIntoSlice;
+use crate::frames::helpers::CopyIntoSlice;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Serial(pub [u8; 5]);
@@ -52,7 +52,7 @@ impl From<&Serial> for heapless::String<10> {
     }
 }
 
-impl crate::frames::CopyIntoSlice for Serial {
+impl CopyIntoSlice for Serial {
     fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
         match dst.get_mut(0..self.0.len()) {
             Some(x) => {

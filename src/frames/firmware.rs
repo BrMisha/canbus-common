@@ -1,6 +1,6 @@
 use core::ops::{Deref, DerefMut};
 use num_traits::ToBytes;
-use crate::frames::CopyIntoSlice;
+use crate::frames::helpers::CopyIntoSlice;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct UploadPartChangePos(usize);
@@ -50,7 +50,7 @@ impl From<UploadPartChangePos> for [u8; 3] {
     }
 }
 
-impl crate::frames::CopyIntoSlice for UploadPartChangePos {
+impl CopyIntoSlice for UploadPartChangePos {
     fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
         match dst.get_mut(0..3) {
             Some(x) => {
@@ -118,7 +118,7 @@ impl From<UploadPart> for [u8; 8] {
     }
 }
 
-impl crate::frames::CopyIntoSlice for UploadPart {
+impl CopyIntoSlice for UploadPart {
     fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
         match dst.get_mut(0..8) {
             Some(x) => {

@@ -1,5 +1,4 @@
-use crate::frames::CopyIntoSlice;
-use crate::frames::serial::Serial;
+use crate::frames::helpers::CopyIntoSlice;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Version {
@@ -39,7 +38,7 @@ impl From<Version> for [u8; 8] {
     }
 }
 
-impl crate::frames::CopyIntoSlice for Version {
+impl CopyIntoSlice for Version {
     fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
         match dst.get_mut(0..8) {
             Some(x) => {
