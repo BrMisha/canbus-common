@@ -87,8 +87,8 @@ pub enum Frame {
     Serial(Type<serial::Serial, Empty>),
     HardwareVersion(Type<version::Version, Empty>),
     FirmwareVersion(Type<version::Version, Empty>),
-    /*PendingFirmwareVersion(Type<Option<version::Version>>),
-    FirmwareUploadPartChangePos(firmware::UploadPartChangePos),
+    PendingFirmwareVersion(Type<version::Version, Empty>),
+    /*FirmwareUploadPartChangePos(firmware::UploadPartChangePos),
     FirmwareUploadPause(bool),
     FirmwareUploadPart(firmware::UploadPart),
     FirmwareUploadFinished,
@@ -145,6 +145,10 @@ impl Frame {
             MessageId::FirmwareVersion => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
                 Ok(Frame::FirmwareVersion(t))
+            }
+            MessageId::PendingFirmwareVersion => {
+                let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
+                Ok(Frame::PendingFirmwareVersion(t))
             }
             /*n @ MessageId::HardwareVersion | n @ MessageId::FirmwareVersion => {
                 fn put(n: MessageId, v: Type<version::Version>) -> Frame {
@@ -286,6 +290,9 @@ impl Frame {
             Frame::FirmwareVersion(v) =>  {
                 v.into_slice(dst)
             },
+            Frame::PendingFirmwareVersion(v) =>  {
+                v.into_slice(dst)
+            },
             /*Frame::DynId(v) => (MessageId::DynId, RawType::new_data(<[u8; 6]>::from(*v))),
             n @ Frame::HardwareVersion(v) | n @ Frame::FirmwareVersion(v) => {
                 let id = match n {
@@ -370,8 +377,8 @@ impl Frame {
             Frame::Serial(_) => MessageId::Serial,
             Frame::HardwareVersion(_) => MessageId::HardwareVersion,
             Frame::FirmwareVersion(_) => MessageId::FirmwareVersion,
-            /*
             Frame::PendingFirmwareVersion(_) => MessageId::PendingFirmwareVersion,
+            /*
             Frame::FirmwareUploadPartChangePos(_) => MessageId::FirmwareUploadPartChangePos,
             Frame::FirmwareUploadPause(_) => MessageId::FirmwareUploadPause,
             Frame::FirmwareUploadPart(_) => MessageId::FirmwareUploadPart,
@@ -431,6 +438,7 @@ mod tests {
         }
         none(MessageId::FirmwareVersion, Frame::FirmwareVersion(Type::Request(Empty)));
         none(MessageId::HardwareVersion, Frame::HardwareVersion(Type::Request(Empty)));
+        none(MessageId::PendingFirmwareVersion, Frame::PendingFirmwareVersion(Type::Request(Empty)));
 
         fn data(v: version::Version, id: MessageId, res: Frame) {
             assert_eq!(
@@ -452,6 +460,7 @@ mod tests {
         };
         data(v, MessageId::FirmwareVersion, Frame::FirmwareVersion(Data(v)));
         data(v, MessageId::HardwareVersion, Frame::HardwareVersion(Data(v)));
+        data(v, MessageId::PendingFirmwareVersion, Frame::PendingFirmwareVersion(Data(v)));
 /*
         assert_eq!(
             Frame::parse_frame(

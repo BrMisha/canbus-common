@@ -1,3 +1,4 @@
+use crate::frames::CopyIntoSlice;
 use crate::frames::serial::Serial;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -21,9 +22,8 @@ impl From<[u8; 8]> for Version {
 
 impl From<Version> for [u8; 8] {
     fn from(v: Version) -> Self {
-        let mut data: [u8; 8] = [v.major, v.minor, 0, 0, 0, 0, 0, 0];
-        data[2..4].clone_from_slice(&v.path.to_be_bytes());
-        data[4..8].clone_from_slice(&v.build.to_be_bytes());
+        let mut data: [u8; 8] = [0; 8];
+        v.copy_into_slice(&mut data);
         data
     }
 }

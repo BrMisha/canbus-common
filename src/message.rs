@@ -37,13 +37,13 @@ pub enum MessageId {
 
     ModuleBatteryManagerUnit = 20,*/
 
-    /*
+
     PendingFirmwareVersion = 10,
-    FirmwareUploadPartChangePos = 11, // to host
-    FirmwareUploadPause = 8026,         // to host
-    FirmwareUploadPart = 8028,          // from host
-    FirmwareUploadFinished = 8029,         // from host
-    FirmwareStartUpdate = 8030,         // from host*/
+    /*FirmwareUploadPartChangePos = 11, // to host
+    FirmwareUploadPause = 12,         // to host
+    FirmwareUploadPart = 13,          // from host
+    FirmwareUploadFinished = 14,         // from host
+    FirmwareStartUpdate = 15,         // from host*/
 }
 
 #[cfg(test)]
