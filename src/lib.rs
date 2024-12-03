@@ -1,7 +1,7 @@
 #![no_std]
 
-use num_traits::{FromPrimitive, ToPrimitive};
 use crate::message_id::MessageId;
+use num_traits::{FromPrimitive, ToPrimitive};
 
 pub mod message_id;
 pub mod messages;
@@ -27,12 +27,14 @@ pub fn to_slice(message: &messages::Message, dst: &mut [u8]) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
-    use crate::messages::{firmware};
     use super::*;
+    use crate::messages::firmware;
 
     #[test]
     fn convert_data() {
-        let mess = messages::Message::FirmwareUploadPartChangePos(messages::Type::Data(firmware::UploadPartChangePos::new(1000).unwrap()));
+        let mess = messages::Message::FirmwareUploadPartChangePos(messages::Type::Data(
+            firmware::UploadPartChangePos::new(1000).unwrap(),
+        ));
         // not enough space
         assert_eq!(to_slice(&mess, &mut [1, 2, 3]), None);
         assert_eq!(to_slice(&mess, &mut [1,]), None);

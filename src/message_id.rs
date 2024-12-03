@@ -15,8 +15,8 @@ pub enum MessageId {
 
 #[cfg(test)]
 mod tests {
-    use num_traits::FromPrimitive;
     use super::*;
+    use num_traits::FromPrimitive;
 
     #[test]
     fn message_id() {
