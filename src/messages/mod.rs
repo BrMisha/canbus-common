@@ -1,4 +1,4 @@
-use crate::message::MessageId;
+use crate::message_id::MessageId;
 
 pub mod firmware;
 pub mod helpers;
@@ -156,7 +156,7 @@ impl Message {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::message::MessageId;
+    use crate::message_id::MessageId;
 
     #[test]
     fn serial() {
