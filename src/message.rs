@@ -1,28 +1,3 @@
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct SubId(pub u16);
-
-impl SubId {
-    pub fn is_valid(&self) -> bool {
-        self.0 != 0
-    }
-
-    pub fn split(&self) -> [u8; 2] {
-        self.0.to_be_bytes()
-    }
-}
-
-impl From<SubId> for [u8; 2] {
-    fn from(v: SubId) -> Self {
-        v.split()
-    }
-}
-
-impl From<[u8; 2]> for SubId {
-    fn from(v: [u8; 2]) -> Self {
-        Self(u16::from_be_bytes(v))
-    }
-}
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq, enum_primitive_derive::Primitive)]
 pub enum MessageId {
     Serial = 0,
