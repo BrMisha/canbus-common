@@ -322,24 +322,24 @@ mod tests {
         assert_eq!(
             Message::parse_message(
                 MessageId::FirmwareUploadPart,
-                &[0x01, 0x02, 0x03, 1, 2, 3, 4, 5],
+                &[0x01, 0x02, 0x03, 1, 2, 3, 4, 5, 6],
                 false
             ),
             Ok(Message::FirmwareUploadPart(Type::Data(
-                firmware::UploadPart::new(0x010203usize, [1, 2, 3, 4, 5]).unwrap()
+                firmware::UploadPart::new(0x010203usize, [1, 2, 3, 4, 5, 6]).unwrap()
             )))
         );
 
         let mut buf = [0; 10];
         let (size, is_request) = Message::FirmwareUploadPart(Type::Data(
-            firmware::UploadPart::new(0x010203usize, [1, 2, 3, 4, 5]).unwrap(),
+            firmware::UploadPart::new(0x010203usize, [1, 2, 3, 4, 5, 6]).unwrap(),
         ))
         .message_into_slise(&mut buf)
         .unwrap();
         assert!(!is_request);
         assert_eq!(
             buf[..size].as_ref(),
-            [0x01, 0x02, 0x03, 1, 2, 3, 4, 5].as_ref()
+            [0x01, 0x02, 0x03, 1, 2, 3, 4, 5, 6].as_ref()
         );
     }
 

@@ -65,11 +65,11 @@ impl CopyIntoSlice for UploadPartChangePos {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct UploadPart {
     position: usize,
-    pub data: [u8; 5],
+    pub data: [u8; 6],
 }
 
 impl UploadPart {
-    pub fn new(position: usize, data: [u8; 5]) -> Option<Self> {
+    pub fn new(position: usize, data: [u8; 6]) -> Option<Self> {
         match position {
             0..=UploadPartChangePos::MAX => Some(Self { position, data }),
             _ => None,
@@ -82,8 +82,8 @@ impl UploadPart {
     }
 }
 
-impl From<[u8; 8]> for UploadPart {
-    fn from(val: [u8; 8]) -> Self {
+impl From<[u8; 9]> for UploadPart {
+    fn from(val: [u8; 9]) -> Self {
         Self::try_from(val.as_ref()).unwrap()
     }
 }
@@ -92,7 +92,7 @@ impl TryFrom<&[u8]> for UploadPart {
     type Error = ();
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        match (value.get(0..3), value.get(3..8)) {
+        match (value.get(0..3), value.get(3..9)) {
             (Some(position_), Some(data_)) => {
                 Ok(UploadPart {
                     position: {
@@ -109,9 +109,9 @@ impl TryFrom<&[u8]> for UploadPart {
     }
 }
 
-impl From<UploadPart> for [u8; 8] {
+impl From<UploadPart> for [u8; 9] {
     fn from(v: UploadPart) -> Self {
-        let mut ar: [u8; 8] = Default::default();
+        let mut ar: [u8; 9] = Default::default();
         v.copy_into_slice(&mut ar).unwrap();
         ar
     }
@@ -119,7 +119,7 @@ impl From<UploadPart> for [u8; 8] {
 
 impl CopyIntoSlice for UploadPart {
     fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
-        match dst.get_mut(0..8) {
+        match dst.get_mut(0..9) {
             Some(x) => {
                 x[..3].clone_from_slice(
                     (self.position as u32).to_be_bytes()[1..]
@@ -192,16 +192,16 @@ mod tests {
 
     #[test]
     fn upload_part() {
-        assert_eq!(UploadPart::new(0xFFFFFFusize + 1, [1, 2, 3, 4, 5]), None);
+        assert_eq!(UploadPart::new(0xFFFFFFusize + 1, [1, 2, 3, 4, 5, 6]), None);
 
-        let p = UploadPart::new(0xFFF1FFusize, [1, 2, 3, 4, 5]).unwrap();
-        assert_eq!(p.deref(), [1, 2, 3, 4, 5]);
+        let p = UploadPart::new(0xFFF1FFusize, [1, 2, 3, 4, 5, 6]).unwrap();
+        assert_eq!(p.deref(), [1, 2, 3, 4, 5, 6]);
         assert_eq!(p.position, 0xFFF1FFusize);
 
-        let p = UploadPart::from([0x01, 0x02, 0x03, 1, 2, 3, 4, 5]);
-        assert_eq!(p.data, [1, 2, 3, 4, 5]);
+        let p = UploadPart::from([0x01, 0x02, 0x03, 1, 2, 3, 4, 5, 6]);
+        assert_eq!(p.data, [1, 2, 3, 4, 5, 6]);
         assert_eq!(p.position, 0x010203usize);
 
-        assert_eq!(<[u8; 8]>::from(p), [0x01, 0x02, 0x03, 1, 2, 3, 4, 5]);
+        assert_eq!(<[u8; 9]>::from(p), [0x01, 0x02, 0x03, 1, 2, 3, 4, 5, 6]);
     }
 }
