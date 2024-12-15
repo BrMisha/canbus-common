@@ -11,6 +11,8 @@ pub enum MessageId {
     FirmwareUploadPart = 13,          // from host
     FirmwareStartUpdate = 14,         // from host
     FirmwareUploadFinished = 15,      // from host
+
+    Battery = 50,
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 use crate::message_id::MessageId;
 
+pub mod battery;
 pub mod firmware;
 pub mod helpers;
 pub mod serial;
@@ -62,6 +63,7 @@ pub enum Message {
     FirmwareUploadPart(Type<firmware::UploadPart, Empty>),
     FirmwareStartUpdate,
     FirmwareUploadFinished,
+    Battery(Type<battery::Battery, Empty>),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -120,6 +122,10 @@ impl Message {
                 true => Err(ParseError::RemoteFrame),
                 false => Ok(Message::FirmwareUploadFinished),
             },
+            MessageId::Battery => {
+                let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
+                Ok(Message::Battery(t))
+            }
         }
     }
 
@@ -134,6 +140,7 @@ impl Message {
             Message::FirmwareUploadPart(v) => v.into_slice(dst),
             Message::FirmwareStartUpdate => Some((0, false)),
             Message::FirmwareUploadFinished => Some((0, false)),
+            Message::Battery(v) => v.into_slice(dst),
         }
     }
 
@@ -149,6 +156,7 @@ impl Message {
             Message::FirmwareUploadPart(_) => MessageId::FirmwareUploadPart,
             Message::FirmwareStartUpdate => MessageId::FirmwareStartUpdate,
             Message::FirmwareUploadFinished => MessageId::FirmwareUploadFinished,
+            Message::Battery(_) => MessageId::Battery,
         }
     }
 }
@@ -353,5 +361,34 @@ mod tests {
             .unwrap();
         assert!(!is_request);
         assert_eq!(buf[..size].as_ref(), &[]);
+    }
+
+    #[test]
+    fn battery() {
+        assert_eq!(
+            Message::parse_message(MessageId::Battery, &[], true),
+            Ok(Message::Battery(Type::Request(Empty)))
+        );
+
+        assert_eq!(
+            Message::Battery(Type::Request(Empty)).message_into_slise(&mut [5, 5]),
+            Some((0, true))
+        );
+
+        assert_eq!(
+            Message::parse_message(MessageId::Battery, &[1, 2, 3, 4, 5], false),
+            Ok(Message::Battery(Type::Data(battery::Battery::from([
+                1, 2, 3, 4, 5
+            ]))))
+        );
+
+        let mut buf = [5; 50];
+        let r = Message::Battery(Type::Data(battery::Battery::from([1, 2, 3, 4, 5])))
+            .message_into_slise(&mut buf)
+            .unwrap();
+        assert_eq!(
+            (5usize, false, [1u8, 2, 3, 4, 5].as_slice()),
+            (r.0, r.1, &buf[..5])
+        );
     }
 }
