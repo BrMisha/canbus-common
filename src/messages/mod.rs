@@ -57,7 +57,7 @@ pub enum Message {
     Serial(Type<serial::Serial, Empty>),
     HardwareVersion(Type<version::Version, Empty>),
     FirmwareVersion(Type<version::Version, Empty>),
-    PendingFirmwareVersion(Type<version::Version, Empty>),
+    PendingFirmwareVersion(Type<helpers::OptionWrapped<version::Version>, Empty>),
     FirmwareUploadPartChangePos(Type<firmware::UploadPartChangePos, Empty>),
     FirmwareUploadPause(Type<bool, Empty>),
     FirmwareUploadPart(Type<firmware::UploadPart, Empty>),
@@ -165,6 +165,7 @@ impl Message {
 mod tests {
     use super::*;
     use crate::message_id::MessageId;
+    use crate::messages::version::Version;
 
     #[test]
     fn serial() {
@@ -246,11 +247,32 @@ mod tests {
             MessageId::HardwareVersion,
             Message::HardwareVersion(Type::Data(v)),
         );
+
         data(
             v,
             MessageId::PendingFirmwareVersion,
-            Message::PendingFirmwareVersion(Type::Data(v)),
+            Message::PendingFirmwareVersion(Type::Data(helpers::OptionWrapped(Option::from(v)))),
         );
+    }
+
+    #[test]
+    fn pending_version() {
+        let ver = Version {
+            major: 1,
+            minor: 2,
+            path: 3,
+            build: 4,
+        };
+        let v = Message::PendingFirmwareVersion(Type::Data(helpers::OptionWrapped(Some(ver))));
+        let mut buf = [5; 50];
+        let (size, is_request) = v.message_into_slise(&mut buf).unwrap();
+        assert_eq!(is_request, false);
+        assert_eq!(Message::parse_message(MessageId::PendingFirmwareVersion, &buf[..size], false).unwrap(), v);
+
+        let v = Message::PendingFirmwareVersion(Type::Data(helpers::OptionWrapped(None)));
+        let (size, is_request) = v.message_into_slise(&mut buf).unwrap();
+        assert_eq!(is_request, false);
+        assert_eq!(Message::parse_message(MessageId::PendingFirmwareVersion, &buf[..size], false).unwrap(), v);
     }
 
     #[test]
@@ -270,8 +292,8 @@ mod tests {
         let (size, is_request) = Message::FirmwareUploadPartChangePos(Type::Data(
             firmware::UploadPartChangePos::new(0x010203usize).unwrap(),
         ))
-        .message_into_slise(&mut buf)
-        .unwrap();
+            .message_into_slise(&mut buf)
+            .unwrap();
 
         assert!(!is_request);
         assert_eq!(buf.get(..size).unwrap(), &[0x01, 0x02, 0x03]);
@@ -334,8 +356,8 @@ mod tests {
         let (size, is_request) = Message::FirmwareUploadPart(Type::Data(
             firmware::UploadPart::new(0x010203usize, [1, 2, 3, 4, 5, 6]).unwrap(),
         ))
-        .message_into_slise(&mut buf)
-        .unwrap();
+            .message_into_slise(&mut buf)
+            .unwrap();
         assert!(!is_request);
         assert_eq!(
             buf[..size].as_ref(),
