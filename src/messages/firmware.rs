@@ -1,3 +1,4 @@
+use crate::messages::helpers::CopyIntoSlice;
 use core::ops::{Deref, DerefMut};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -21,16 +22,43 @@ impl UploadPartChangePos {
 
 impl From<[u8; 3]> for UploadPartChangePos {
     fn from(val: [u8; 3]) -> Self {
-        let mut ar: [u8; 4] = [0, 0, 0, 0];
-        ar[1..].clone_from_slice(val[..].try_into().unwrap());
-        UploadPartChangePos(u32::from_be_bytes(ar) as usize)
+        Self::try_from(val.as_ref()).unwrap()
+    }
+}
+
+impl TryFrom<&[u8]> for UploadPartChangePos {
+    type Error = ();
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match value.get(0..3) {
+            Some(value) => {
+                let mut ar: [u8; 4] = [0, 0, 0, 0];
+                ar[1..].clone_from_slice(value[..].as_ref());
+                Ok(UploadPartChangePos(u32::from_be_bytes(ar) as usize))
+            }
+            _ => Err(()),
+        }
     }
 }
 
 impl From<UploadPartChangePos> for [u8; 3] {
     fn from(v: UploadPartChangePos) -> Self {
-        let arr: [u8; 4] = (v.0 as u32).to_be_bytes();
-        arr[1..].try_into().unwrap()
+        let mut arr: [u8; 3] = [0; 3];
+        v.copy_into_slice(&mut arr).unwrap();
+        arr
+    }
+}
+
+impl CopyIntoSlice for UploadPartChangePos {
+    fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
+        match dst.get_mut(0..3) {
+            Some(x) => {
+                let arr: [u8; 4] = (self.0 as u32).to_be_bytes();
+                x.clone_from_slice(&arr[1..]);
+                Some(x.len())
+            }
+            None => None,
+        }
     }
 }
 
@@ -56,14 +84,27 @@ impl UploadPart {
 
 impl From<[u8; 8]> for UploadPart {
     fn from(val: [u8; 8]) -> Self {
-        UploadPart {
-            position: {
-                // use first 3 bytes
-                let mut ar: [u8; 4] = [0, 0, 0, 0];
-                ar[1..].clone_from_slice(val[..3].try_into().unwrap());
-                u32::from_be_bytes(ar) as usize
-            },
-            data: val[3..].try_into().unwrap(),
+        Self::try_from(val.as_ref()).unwrap()
+    }
+}
+
+impl TryFrom<&[u8]> for UploadPart {
+    type Error = ();
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match (value.get(0..3), value.get(3..8)) {
+            (Some(position_), Some(data_)) => {
+                Ok(UploadPart {
+                    position: {
+                        // use first 3 bytes
+                        let mut ar: [u8; 4] = [0, 0, 0, 0];
+                        ar[1..].clone_from_slice(position_.as_ref());
+                        u32::from_be_bytes(ar) as usize
+                    },
+                    data: data_.try_into().unwrap(),
+                })
+            }
+            _ => Err(()),
         }
     }
 }
@@ -71,10 +112,25 @@ impl From<[u8; 8]> for UploadPart {
 impl From<UploadPart> for [u8; 8] {
     fn from(v: UploadPart) -> Self {
         let mut ar: [u8; 8] = Default::default();
-        ar[..3].clone_from_slice((v.position as u32).to_be_bytes()[1..].try_into().unwrap());
-        ar[3..].clone_from_slice(&v.data);
-
+        v.copy_into_slice(&mut ar).unwrap();
         ar
+    }
+}
+
+impl CopyIntoSlice for UploadPart {
+    fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
+        match dst.get_mut(0..8) {
+            Some(x) => {
+                x[..3].clone_from_slice(
+                    (self.position as u32).to_be_bytes()[1..]
+                        .try_into()
+                        .unwrap(),
+                );
+                x[3..].clone_from_slice(&self.data);
+                Some(x.len())
+            }
+            None => None,
+        }
     }
 }
 
