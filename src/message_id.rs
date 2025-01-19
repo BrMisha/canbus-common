@@ -4,6 +4,7 @@ pub enum MessageId {
 
     HardwareVersion = 1,
     FirmwareVersion = 2,
+    Reboot = 3,
 
     PendingFirmwareVersion = 10,
     FirmwareUploadPartChangePos = 11, // to host

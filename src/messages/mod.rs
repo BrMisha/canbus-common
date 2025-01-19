@@ -57,6 +57,7 @@ pub enum Message {
     Serial(Type<serial::Serial, Empty>),
     HardwareVersion(Type<version::Version, Empty>),
     FirmwareVersion(Type<version::Version, Empty>),
+    Reboot,
     PendingFirmwareVersion(Type<helpers::OptionWrapped<version::Version>, Empty>),
     FirmwareUploadPartChangePos(Type<firmware::UploadPartChangePos, Empty>),
     FirmwareUploadPause(Type<bool, Empty>),
@@ -94,6 +95,10 @@ impl Message {
             MessageId::FirmwareVersion => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
                 Ok(Message::FirmwareVersion(t))
+            }
+            MessageId::Reboot => match is_request {
+                true => Err(ParseError::RemoteFrame),
+                false => Ok(Message::Reboot),
             }
             MessageId::PendingFirmwareVersion => {
                 let t = Type::from_slice(is_request, data).ok_or(ParseError::WrongData)?;
@@ -134,6 +139,7 @@ impl Message {
             Message::Serial(v) => v.into_slice(dst),
             Message::HardwareVersion(v) => v.into_slice(dst),
             Message::FirmwareVersion(v) => v.into_slice(dst),
+            Message::Reboot => Some((0, false)),
             Message::PendingFirmwareVersion(v) => v.into_slice(dst),
             Message::FirmwareUploadPartChangePos(v) => v.into_slice(dst),
             Message::FirmwareUploadPause(v) => v.into_slice(dst),
@@ -150,6 +156,7 @@ impl Message {
             Message::Serial(_) => MessageId::Serial,
             Message::HardwareVersion(_) => MessageId::HardwareVersion,
             Message::FirmwareVersion(_) => MessageId::FirmwareVersion,
+            Message::Reboot => MessageId::Reboot,
             Message::PendingFirmwareVersion(_) => MessageId::PendingFirmwareVersion,
             Message::FirmwareUploadPartChangePos(_) => MessageId::FirmwareUploadPartChangePos,
             Message::FirmwareUploadPause(_) => MessageId::FirmwareUploadPause,
@@ -253,6 +260,26 @@ mod tests {
             MessageId::PendingFirmwareVersion,
             Message::PendingFirmwareVersion(Type::Data(helpers::OptionWrapped(Option::from(v)))),
         );
+    }
+
+    #[test]
+    fn reboot() {
+        assert_eq!(
+            Message::parse_message(MessageId::Reboot, [1, 1].as_ref(), true),
+            Err(ParseError::RemoteFrame)
+        );
+
+        assert_eq!(
+            Message::parse_message(MessageId::Reboot, &[], false),
+            Ok(Message::Reboot)
+        );
+
+        let mut buf = [0; 10];
+        let (size, is_request) = Message::Reboot
+            .message_into_slise(&mut buf)
+            .unwrap();
+        assert!(!is_request);
+        assert_eq!(buf[..size].as_ref(), &[]);
     }
 
     #[test]
