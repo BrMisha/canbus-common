@@ -425,19 +425,19 @@ mod tests {
         );
 
         assert_eq!(
-            Message::parse_message(MessageId::Battery, &[1, 2, 3, 4, 5], false),
+            Message::parse_message(MessageId::Battery, &[1, 2, 3, 4, 5, 6], false),
             Ok(Message::Battery(Type::Data(battery::Battery::from([
-                1, 2, 3, 4, 5
+                1, 2, 3, 4, 5, 6
             ]))))
         );
 
         let mut buf = [5; 50];
-        let r = Message::Battery(Type::Data(battery::Battery::from([1, 2, 3, 4, 5])))
+        let r = Message::Battery(Type::Data(battery::Battery::from([1, 2, 3, 4, 5, 6])))
             .message_into_slise(&mut buf)
             .unwrap();
         assert_eq!(
-            (5usize, false, [1u8, 2, 3, 4, 5].as_slice()),
-            (r.0, r.1, &buf[..5])
+            (6usize, false, [1u8, 2, 3, 4, 5, 6].as_slice()),
+            (r.0, r.1, &buf[..6])
         );
     }
 }

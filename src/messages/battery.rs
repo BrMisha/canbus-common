@@ -4,13 +4,14 @@ use core::fmt::Debug;
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Battery {
     pub temperature: [i8; 5],
+    pub fan_duty: u8,
 }
 
 impl TryFrom<&[u8]> for Battery {
     type Error = ();
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        match value.get(0..5) {
+        match value.get(0..6) {
             Some(value) => Ok(Self {
                 temperature: {
                     let mut array: [i8; 5] = Default::default();
@@ -19,6 +20,7 @@ impl TryFrom<&[u8]> for Battery {
                     }
                     array
                 },
+                fan_duty: value[5],
             }),
             None => Err(()),
         }
@@ -27,9 +29,10 @@ impl TryFrom<&[u8]> for Battery {
 
 impl CopyIntoSlice for Battery {
     fn copy_into_slice(&self, dst: &mut [u8]) -> Option<usize> {
-        match dst.get_mut(0..5) {
+        match dst.get_mut(0..6) {
             Some(x) => {
-                x.copy_from_slice(self.temperature.map(|v| v as u8).as_ref());
+                x[..5].copy_from_slice(self.temperature.map(|v| v as u8).as_ref());
+                x[5] = self.fan_duty;
                 Some(x.len())
             }
             None => None,
@@ -37,15 +40,15 @@ impl CopyIntoSlice for Battery {
     }
 }
 
-impl From<[u8; 5]> for Battery {
-    fn from(v: [u8; 5]) -> Self {
+impl From<[u8; 6]> for Battery {
+    fn from(v: [u8; 6]) -> Self {
         Self::try_from(v.as_ref()).unwrap()
     }
 }
 
-impl From<Battery> for [u8; 5] {
+impl From<Battery> for [u8; 6] {
     fn from(v: Battery) -> Self {
-        let mut data: [u8; 5] = [0; 5];
+        let mut data: [u8; 6] = [0; 6];
         v.copy_into_slice(&mut data);
         data
     }
@@ -57,10 +60,12 @@ mod tests {
 
     #[test]
     fn test() {
-        let s = Battery::from([1, 255, 0, 254, 253]);
+        let s = Battery::from([1, 255, 0, 254, 253, 45]);
         assert_eq!(s.temperature, [1, -1, 0, -2, -3]);
+        assert_eq!(s.fan_duty, 45);
 
-        let s = Battery::try_from([1, 255, 0, 254, 253]).unwrap();
+        let s = Battery::try_from([1, 255, 0, 254, 253, 0]).unwrap();
         assert_eq!(s.temperature, [1, -1, 0, -2, -3]);
+        assert_eq!(s.fan_duty, 0);
     }
 }
