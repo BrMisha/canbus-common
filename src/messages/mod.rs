@@ -64,7 +64,7 @@ pub enum Message {
     FirmwareUploadPart(Type<firmware::UploadPart, Empty>),
     FirmwareStartUpdate,
     FirmwareUploadFinished,
-    Battery(Type<battery::Battery, Empty>),
+    Battery(Type<battery::Battery, battery::BatteryRequest>),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -415,14 +415,17 @@ mod tests {
     #[test]
     fn battery() {
         assert_eq!(
-            Message::parse_message(MessageId::Battery, &[], true),
-            Ok(Message::Battery(Type::Request(Empty)))
+            Message::parse_message(MessageId::Battery, &[1], true),
+            Ok(Message::Battery(Type::Request(battery::BatteryRequest{
+                fan_duty: None
+            })))
         );
 
-        assert_eq!(
-            Message::Battery(Type::Request(Empty)).message_into_slise(&mut [5, 5]),
-            Some((0, true))
-        );
+        let mut buf = [5; 50];
+        let r = Message::Battery(Type::Request(battery::BatteryRequest{
+            fan_duty: Some(1)
+        })).message_into_slise(&mut buf).unwrap();
+        assert_eq!((1usize, true, [0b1000_0001_u8,].as_slice()), (r.0, r.1, &buf[..1]));
 
         assert_eq!(
             Message::parse_message(MessageId::Battery, &[1, 2, 3, 4, 5, 6], false),
@@ -431,7 +434,6 @@ mod tests {
             ]))))
         );
 
-        let mut buf = [5; 50];
         let r = Message::Battery(Type::Data(battery::Battery::from([1, 2, 3, 4, 5, 6])))
             .message_into_slise(&mut buf)
             .unwrap();
