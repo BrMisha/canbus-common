@@ -54,7 +54,7 @@ impl From<Battery> for [u8; 6] {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
 pub struct BatteryRequest {
     pub fan_duty: Option<u8>,
 }
